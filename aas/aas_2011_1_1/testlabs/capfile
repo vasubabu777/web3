@@ -1,0 +1,235 @@
+# vim: filetype=ruby
+require '/u/build/build1/testlabs/lib/installer.rb'
+
+###############################
+## Release notes:
+## http://sf1-lnx.qa.shared-bo.mtv1.vrsn.com/sf/go/doc17087?nav=1
+##
+## Manual changes
+##
+###############################
+
+set :release, "aas_2011_1_1"
+set :is_full, "false"
+set :build_dir, "/u/build/build3/aas/#{release}/lnx8-build/#{build_number}"
+set :logpath , "/u/build/build1/buildOp/aas/#{release}/testlabs/logDir"
+set :be_install_dir, "/app/vrsn"
+load '/u/build/build1/testlabs/lib/commontask.cap' #SHARED TASKS
+set :staging, "/remoteInstall/#{release}/#{build_number}"
+set :stage_dir, "#{build_number}.staging"
+
+@mailarray = ['DL-VSN-vss-testlabs@symantec.com','DL-VSN-SSLQAEDCNotification@symantec.com']
+set :timestamp, Time.now.strftime("%Y%m%d%H%M")
+
+#SWITCH 
+case testbed
+   when "aas3"
+     role :app, "pin@aas3be-m1-ap"
+     role :web, "pin@aas3fe-m1-wb"
+     role :qm, "pin@mmr1qmzn1be-m1-ap"
+     qm_instances = ['AAS3']
+     qm_install_dir = "/app/data/sql/AAS/AAS3"
+     emailsubj = "AAS3"
+     emailtemplate = load_email_template("aas3.mail")
+   else
+     puts "Invalid testbed #{testbed}"
+end
+
+desc "Install all AAS components: QM, BE"
+task :install do
+  begin
+#      stage_qm
+#      swap_qm_install
+      stage
+      swap_install
+  rescue Exception => error
+     install_status("1",emailtemplate,emailsubj)
+     exit 1
+  end
+     install_status("0",emailtemplate,emailsubj)
+end
+
+desc "Install QM sql files"
+task :stage_qm, :roles => :qm do 
+# Create staging directories and remove old packages if existed
+  staging_prep(staging, release) 
+
+# Copy packages
+  set :qm_packages, [ 
+    { :package_tag => "aas_sql", :install_path => "#{qm_install_dir}/#{stage_dir}", :customizable => "no" }, 
+  ]
+
+  qm_packages.each { |x|
+     upload  "#{build_dir}/productionPackaging/#{release}/#{release}_" + x[:package_tag] + ".tar", "#{staging}/productionPackaging/", :via => :scp
+  }
+
+  # Create new build directory
+  stage_prep(qm_install_dir, build_number) 
+
+# Overlay installs copy from previous
+  if "#{is_full}" == "false"
+    currentlink = capture("readlink #{qm_install_dir}/sqlTemplates | cut -f1 -d/").strip
+    run "cd #{qm_install_dir}/#{currentlink}; find . -depth | cpio -pdmv ../#{stage_dir}"
+  end
+
+# Install packages
+  qm_packages.each { |x|
+     run "cd #{x[:install_path]}; tar xvfp #{staging}/productionPackaging/#{release}_" + x[:package_tag] + ".tar"
+  }
+
+  print "QM stage complete"
+
+end
+
+desc "Relink to new QM sql files"
+task :swap_qm_install, :roles => :qm do
+# Stop QM
+  stop_qm
+
+# Move current link to Backups
+  currentlink = capture("readlink #{qm_install_dir}/sqlTemplates | cut -f1 -d/").strip
+  run "cd #{qm_install_dir}; mv #{currentlink} Backups/#{currentlink}_#{timestamp}"
+
+# Recreate new link
+  run "cd #{qm_install_dir}; mv #{stage_dir} #{build_number}; rm -f sqlTemplates; ln -s #{build_number}/data/sqlTemplates"
+
+# Start QM
+  start_qm
+
+# Remove old backups
+  clean_backups("#{qm_install_dir}/Backups",3,"*")
+
+  print "Relink QM complete"
+
+end
+
+desc "Install AAS Jboss files"
+task :stage, :roles => :app do 
+# Create staging directories and remove old packages if existed
+  staging_prep(staging, release) 
+
+# Copy packages
+  set :be_packages, [ 
+#    { :package_tag => "jbossconf", :install_path => "#{be_install_dir}/#{stage_dir}", :customizable => "no" }, 
+#    { :package_tag => "domain", :install_path => "#{be_install_dir}/#{stage_dir}", :customizable => "yes" }, 
+    { :package_tag => "adms", :install_path => "#{be_install_dir}/#{stage_dir}", :customizable => "no" }, 
+    { :package_tag => "apor", :install_path => "#{be_install_dir}/#{stage_dir}", :customizable => "no" }, 
+#    { :package_tag => "avs", :install_path => "#{be_install_dir}/#{stage_dir}", :customizable => "yes" }, 
+#    { :package_tag => "cat", :install_path => "#{be_install_dir}/#{stage_dir}", :customizable => "yes" }, 
+  ]
+ 
+  be_packages.each { |x|
+     upload  "#{build_dir}/productionPackaging/#{release}/#{release}_" + x[:package_tag] + ".tar", "#{staging}/productionPackaging/", :via => :scp
+  }
+
+# Copy customization file
+  upload "/u/build/build1/buildOp/aas/#{release}/$CAPISTRANO:HOST$/CustomizeInit.pl", "#{staging}/CustomizeInit.pl", :via => :scp
+
+# Create new build directory
+  stage_prep(be_install_dir, build_number) 
+
+# Overlay installs copy from previous
+  if "#{is_full}" == "false"
+   currentlink = capture("readlink #{be_install_dir}/aas | cut -f1 -d/ ").strip
+   previouslink = capture("readlink #{be_install_dir}/previous | cut -f1 -d/ ").strip
+   if "#{previouslink}" == "#{currentlink}"
+      print " I am the first time\n"
+   end
+   run "cd #{be_install_dir}/#{currentlink}; find . -depth | cpio -dpmv #{be_install_dir}/#{stage_dir}"
+  else
+  # Link log directory 
+   run "mkdir -p #{be_install_dir}/#{stage_dir}/aas;cd #{be_install_dir}/#{stage_dir}/aas; ln -s /app/logs/aas log"
+  end
+
+# Install and customize packages
+  be_packages.each { |x|
+     run "cd #{x[:install_path]}; tar xvfp #{staging}/productionPackaging/#{release}_" + x[:package_tag] + ".tar"
+     if x[:customizable] == "yes"
+       run "cd #{x[:install_path]}; perl #{be_install_dir}/customize/Customize.pl -F #{staging}/CustomizeInit.pl"
+     end
+  }
+
+  print "BE stage complete"
+
+end
+
+desc "Relink AAS Jboss files"
+task :swap_install, :roles => :app do
+# Stop AAS Jboss
+   stop_app
+
+# Move current link to Backups
+   currentlink = capture("readlink #{be_install_dir}/aas | cut -f1 -d/ ").strip
+   run "cd #{be_install_dir}; mv #{currentlink} Backups/#{currentlink}_#{timestamp}"
+
+# Recreate new link
+   run "cd #{be_install_dir}; mv #{stage_dir} #{build_number}; rm -f aas; ln -s  #{build_number} aas"
+
+# Start AAS Jboss
+   start_app
+
+# Remove old backups
+   clean_backups("#{be_install_dir}/Backups",3,"*")
+
+   print "Relink BE complete"
+
+end
+
+desc "Stop AAS Jboss"
+task :stop_app, :roles => :app do
+   run "source /home/pin/.bash_profile; #{be_install_dir}/aas/bin/jbossctl stop; true;"
+   sleep 5
+   killjboss("java")
+end
+
+desc "Start AAS Jboss"
+task :start_app, :roles => :app do
+   run "source /home/pin/.bash_profile; #{be_install_dir}/aas/bin/jbossctl start; true;"
+   run " ps -ef | grep aas | egrep -v grep; true;"
+end
+
+def killjboss(process_string)
+   numprocess = capture("ps -ef | grep #{process_string} | egrep -v grep ; echo $?").strip
+   if (numprocess != '1' )
+    run "ps -ef | grep #{process_string} | egrep -v grep "
+    print "INFO: killing #{numprocess} \n"
+    run "ps -ef | grep #{process_string} | egrep -v grep | awk '{print$2}' | xargs kill -s 9; true "
+    run "rm -f #{be_install_dir}/aas/log/jboss.pid"
+   end
+end
+
+desc "Stop QM"
+task :stop_qm, :roles => :qm do
+  qm_instances.each { |x|
+   stop_qm_instance("#{x}")
+  }
+end
+
+def stop_qm_instance(qm_instance)
+  run "cd /ecas/qm/bin; echo yes | ./stop_qm -n #{qm_instance}; true;"
+  sleep 6
+  run " ps -ef | grep #{qm_instance} | grep -v grep; true;"
+end
+
+desc "Start QM"
+task :start_qm, :roles => :qm do
+  qm_instances.each { |x|
+   start_qm_instance("#{x}")
+  }
+end
+
+def start_qm_instance(qm_instance)
+  run "cd /ecas/qm/bin; echo yes | ./start_qm -n #{qm_instance}; true"
+  sleep 6
+  run " ps -ef | grep #{qm_instance} | grep -v grep; true;"
+end
+
+desc "Start AAS Apache"
+task :start_web, :roles => :web do
+   run "/etc/httpd/bin/start_all; true;"
+end
+
+desc "Stop AAS Apache"
+task :stop_web, :roles => :web do
+   run "/etc/httpd/bin/stop_all; true;"
+end

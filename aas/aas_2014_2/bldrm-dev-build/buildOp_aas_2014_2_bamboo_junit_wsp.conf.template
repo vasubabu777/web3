@@ -1,0 +1,266 @@
+use File::Spec;
+
+my $checkOutOptionComment = << 'EOCOMMENT';
+This flag is used to check out the
+paths specified by the 'coTagHash' key in the
+config file.  If a value is specified for a key,
+that indicates the version of the path which
+should be checked out.
+EOCOMMENT
+
+my $createOptionComment = << 'EOCOMMENT';
+This flag is used to create the work-products
+in the directory specified by the 'createDirArray'
+key using the 'createCmd' key.
+EOCOMMENT
+
+my $packageOptionComment = << 'EOCOMMENT';
+This flag is used to package the work-products
+EOCOMMENT
+
+my $symlinkOptionComment = << 'EOCOMMENT';
+This flag is used to create symlinks.
+EOCOMMENT
+
+my $symlinkLatestOptionComment = << 'EOCOMMENT';
+This flag is used to create latest symlink.
+EOCOMMENT
+
+my $checkOutMultipleComment = << 'EOCOMMENT';
+This flag is used to check out the
+from various repositories
+EOCOMMENT
+
+my $createMultipleOptionComment = << 'EOCOMMENT';
+This flag is used to create the work-products
+using multiple creation commands.
+EOCOMMENT
+
+my $testMultipleOptionComment = << 'EOCOMMENT';
+This flag is used to test the work-products
+using multiple creation commands.
+EOCOMMENT
+
+my $multipleSvnCheckOut = << 'EOCOMMENT';
+This flag is used to checkout multiple svn urls
+EOCOMMENT
+
+my $createBaseDirComment = << 'EOCOMMENT';
+This flag is used to create the base dir
+EOCOMMENT
+
+
+my $cwd = File::Spec->rel2abs ( File::Spec->curdir());
+my $cloverHistoryDir = "/u/build/build3/aas/aas_2014_2_junit_wsp/clover_db";
+my $bambooWorkspace = "$ENV{WORKSPACE}";
+# my $bambooWorkspace = "/u/build/build3/aas/aas_2014_2_junit_wsp/bldrm-dev-build";
+my $envHash = {
+      'CLOVER_REPORT' => $cloverHistoryDir,
+      'ANT_HOME' => '/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/ant/versions/1.8.2',
+      'CLASSPATH' => '<BUILD_DIR>/external/repository/junit/jars/junit-3.8.1.jar:<BUILD_DIR>/external/repository/commons-logging/jars/commons-logging-1.0.4.jar:<BUILD_DIR>/external/repository/log4j/jars/log4j-1.2.8.jar:<BUILD_DIR>/external/repository/cactus-ant/jars/cactus-ant-1.5.jar:<BUILD_DIR>/external/repository/dom4j/jars/dom4j-1.3.jar',
+      'JAVA_HOME' => '/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/java/versions/jdk1.7.0_40',
+      'PATH' => '/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/maven/versions/apache-maven-3.0.4/bin:/app/oracle/ORAHOME/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/java/versions/jdk1.7.0_40/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/ant/versions/1.8.2/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/bin:/usr/bin:/usr/local/bin:/bin:/home/ldavid/bin',
+      'JBOSS_HOME' => '/app/jboss',
+      'JBOSS_CONFIG' => 'rice',
+      'ANT_OPTS' =>  '-Xmx1024m',
+      'EXTERNAL_REPOSITORY' => '<BUILD_DIR>/external/repository',
+      'STCE_DIR' => '<BUILD_DIR>',
+      };
+
+$VAR1 =
+  {
+   # config keys
+
+   'baseBuildDir' => '%(baseBuildDir)s',
+   'buildName' => '%(buildName)s',
+   'buildNumEnvName' => 'BUILD_NUMBER', #DOES THIS EVEN WORK?
+   'hostName' => '%(buildHost)s',
+   'forceNewBuildDir' => 1,
+   'doNotCreateSyncFlagDir' => 1,
+   'logDir' => '/u/build/build1/buildOp/aas/aas_2014_2/bldrm-dev-build/logDir',
+   'syncFlagBaseDir' => '/u/build/build1/buildOp/aas/aas_2014_2/syncDir',
+  'fullBuildPath'   => '%(fullBuildPath)s',
+  'fullLogFile'     => '%(fullLogFile)s',
+  'fullErrLogFile'  => '%(fullErrLogFile)s',
+
+   # check out svn multiple keys
+   'checkOutMultipleSvnArray' =>
+   [   
+        {   
+         'coEnvHash' =>
+         {   
+          'PATH' => '/app/oracle/ORAHOME/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/share/java/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/share/ant/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/bin:/usr/bin:/usr/local/bin:/bin:/home/ldavid/bin',
+          'LD_LIBRARY_PATH' => '/app/oracle/ORAHOME/lib:/usr/lib:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/lib'
+         },  
+         'svnCmd' => 'svn co',
+         'coUrlHashArray' =>
+         [   
+          {   
+            'url' => 'http://subversion-lnx.qa.shared-bo.mtv1.vrsn.com/svnroot/aas/branches/aas_2014_2/WhoisServiceProvider',
+            'path' => 'WhoisServiceProvider'
+          },  
+         ],  
+         'username' => 'buildman',
+         'password' => '4buildfru',
+        },  
+   ],
+
+   # set checkOutMultipleUseExistingDir since the
+   # build directory has already been created by
+   # CheckOutMultipleSvn
+   'checkOutMultipleUseExistingDir' => 1,
+
+   'coTagHash' =>
+   {
+    'tools/java/apache-ant' => 'ant_1_1_1',
+    'tools/java/cvsgrab' => 'cvsgrab-2_2_2-local',
+   },
+   'coArray' =>
+   [
+    qw (
+         tools/java/apache-ant
+             tools/java/cvsgrab
+       )
+   ],
+   'coEnvHash' => {
+           'CVSROOT' => 'buildman@subversion-lnx:/cvs',
+           'CVS_RSH' => 'ssh'
+          },
+   'coCmd' => 'cvs co',
+
+   # link keys
+
+   'symlinkHash' =>
+   {
+#    '/u/build/build1/engtools/linux/2.4.9-e.24/java/share/apache-ant-1.7.1' => 'tools/java/apache-ant',
+    '/u/build/build1/releases/java/junit/junit_3_8_1/buildDir/tools/java/junit' => 'tools/java/junit',
+    '/u/build/build1/releases/java/jboss-4.0/JBoss_4_0_1_SP1_sushi/buildDir/tools/java/jboss-4.0' => 'tools/java/jboss-4.0',
+#    '/u/build/build2/qm/linux/qm_v3_0/latest/platform' => undef,
+#    '/u/build/build2/external/external_trunk/lnx8-build/latest/external' => undef,
+   },
+
+   # test multiple keys
+   'testMultipleArray' =>
+   [
+    {
+     'testDir' => '.',
+     'testCmd' => "rm -rf $bambooWorkspace/latest && rm -rf $cloverHistoryDir/clover/current/html",
+     'testEnvHash' => $envHash,
+    },
+    {
+     'testDir' => 'WhoisServiceProvider',
+     'testCmd' => 'mvn clean clover2:setup test clover2:aggregate clover2:clover -Dmaven.test.failure.ignore=true',
+     'testEnvHash' => $envHash,
+    },
+    {
+       'testDir' => '.',
+       'testCmd' => "mkdir -p <BUILD_DIR>/test_results/clover/current && mkdir -p <BUILD_DIR>/test_results/junit/xml && cp <BUILD_DIR>/WhoisServiceProvider/target/site/clover/clover.xml <BUILD_DIR>/test_results/clover/clover.xml && cp <BUILD_DIR>/WhoisServiceProvider/target/surefire-reports/*.xml <BUILD_DIR>/test_results/junit/xml && ln -s <BUILD_DIR>/WhoisServiceProvider/target/site/clover <BUILD_DIR>/test_results/clover/current/html"
+    },
+    {
+       'testDir' => '.',
+       'testCmd' => "ln -s <BUILD_DIR> $bambooWorkspace/latest"
+    },
+   ],
+
+
+   # operation manager keys
+
+   'opHash' =>
+   {
+    'CheckOut' =>
+    {
+     'option' => '-co',
+     'optionComment' => $checkOutOptionComment,
+     'optionConstraint' => '',
+     'package' => 'Build::CheckOut::Base',
+     'method' => 'checkOut',
+     'mailArray' => [ qw(  )]
+    },
+    'Create' =>
+    {
+     'option' => '-cr',
+     'optionComment' => $createOptionComment,
+     'optionConstraint' => '',
+     'package' => 'Build::Create::Base',
+     'method' => 'create',
+     'mailArray' => [ qw (  )]
+    },
+    'CreateMultiple' =>
+    {
+     'option' => '-cm',
+     'optionComment' => $createMultipleOptionComment,
+     'optionConstraint' => '',
+     'package' => 'Build::Create::Multiple',
+     'method' => 'createMultiple',
+     'mailArray' => [ qw (  )]
+    },
+
+    'Package' =>
+    {
+     'option' => '-p',
+     'optionComment' => $packageOptionComment,
+     'optionConstraint' => '',
+     'package' => 'Build::Package::Base',
+     'method' => 'package',
+     'mailArray' => [ qw (  )]
+    },
+    'Symlink' =>
+    {
+     'option' => '-l',
+     'optionComment' => $symlinkOptionComment,
+     'optionConstraint' => '',
+     'package' => 'Build::Symlink::Base',
+     'method' => 'createSymlink',
+     'mailArray' => [ qw (  )],
+     'completionFlagName' => 'SYMLINKDONE'
+    },
+        'SymlinkLatest' =>
+        {
+         'option' => '-l',
+         'optionComment' => $symlinkLatestOptionComment,
+         'optionConstraint' => '',
+         'package' => 'Build::Symlink::Latest',
+         'method' => 'createSymlink',
+         'mailArray' => [ qw (  )],
+        },
+    'CheckOutMultiple' =>
+    {
+     'option' => '-cm',
+     'optionComment' => $checkOutMultipleComment,
+     'optionConstraint' => '',
+     'package' => 'Build::CheckOut::Multiple',
+     'method' => 'checkOutMultiple',
+     'mailArray' => [ qw(  )],
+     'completionFlagName' => 'CHECKOUTDONE'
+    },
+        'CheckOutMultipleSvn' =>
+        {
+         'option' => '-ms',
+         'optionComment' => $multipleSvnCheckOut,
+         'optionConstraint' => '',
+         'package' => 'Build::CheckOut::MultipleSvn',
+         'method' => 'checkOutMultipleSvn',
+         'mailArray' => [ qw (  )]
+        },
+    'TestMultiple' =>
+    {
+     'option' => '-tm',
+     'optionComment' => $testMultipleOptionComment,
+     'optionConstraint' => '',
+     'package' => 'Build::Test::Multiple',
+     'method' => 'testMultiple',
+     'mailArray' => [ qw (  )]
+    },
+    'CreateBaseDir' =>
+    {
+     'option' => '-cbd',
+     'optionComment' => $createBaseDirComment,
+     'optionConstraint' => '',
+     'package' => 'Build::BaseDir::Create',
+     'method' => 'createBaseDir',
+     'mailArray' => [ qw (  )]
+    },
+
+   },
+   'opArray' => [qw ( CreateBaseDir CheckOutMultipleSvn Symlink TestMultiple SymlinkLatest )]
+  };

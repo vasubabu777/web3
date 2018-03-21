@@ -1,0 +1,110 @@
+$VAR1 = [
+          bless( [
+                   bless( {
+		            'suffix' => 1,
+                            'fullBaseInstallDir' => 2,
+                            'customizeHashRelPath' => 3,
+                            'description' => 4,
+                            'preTask' => 5,
+                            'preTaskExecDir' => 6,
+                            'postTask' => 7,
+                            'postTaskExecDir' => 8
+                          }, 'pseudohash' ),
+                   'backup_clean',
+                   '/tasks',
+                   'buildOp/aas/aas-2008-2/qa-aas01-be/packaging/customize/CustomizeInit_BACKUP_CLEAN_INSTALL.pl',
+                   'backup clean install',
+                   '/app/jboss/server/aas/bin/jbossctlstop',
+                   '/app/jboss/server/aas/bin',
+                   'bin/backup_clean.pl',
+                   'bin'
+                 ], 'Package::FullBaseInstallDirEntry' ),
+          bless( [
+                   $VAR1->[0][0],
+                   'eng_celp_qm_stop',
+                   '/app/vrsn/qm',
+                   'buildOp/aas/aas-2008-2/qa-aas01-be/packaging/customize/CustomizeInit_JCELP_QM_CONFIG_INSTALL.pl',
+                   'JCELP QM Stop',
+                   '',
+                   '',
+                   'bin/qm_stop.sh',
+                   '.'
+                 ], 'Package::FullBaseInstallDirEntry' ),
+          bless( [
+                   $VAR1->[0][0],
+                   'jbossconf',
+                   '/app/jboss/server/aas',
+                   'buildOp/aas/aas-2008-2/qa-aas01-be/packaging/customize/CustomizeInit_AAS_CONFIG_INSTALL.pl',
+                   'AAS Jboss Config Files',
+                   '',
+                   '',
+                   '',
+                   ''
+                 ], 'Package::FullBaseInstallDirEntry' ),
+          bless( [
+                   $VAR1->[0][0],
+                   'domain',
+                   '/app/jboss/server/aas',
+                   'buildOp/aas/aas-2008-2/qa-aas01-be/packaging/customize/CustomizeInit_AAS_CONFIG_INSTALL.pl',
+                   'Jcommon Domain Files',
+                   '',
+                   '',
+                   '',
+                   ''
+                 ], 'Package::FullBaseInstallDirEntry' ),
+          bless( [
+                   $VAR1->[0][0],
+                   'adms',
+                  '/app/jboss/server/aas',
+                   'buildOp/aas/aas-2008-2/qa-aas01-be/packaging/customize/CustomizeInit_AAS_CONFIG_INSTALL.pl',
+                   'ADMS Files',
+                   '',
+                   '',
+                   '',
+                   ''
+                 ], 'Package::FullBaseInstallDirEntry' ),
+          bless( [
+                   $VAR1->[0][0],
+                   'apor',
+                  '/app/jboss/server/aas',
+                   'buildOp/aas/aas-2008-2/qa-aas01-be/packaging/customize/CustomizeInit_AAS_CONFIG_INSTALL.pl',
+                   'APOR Files',
+                   '',
+                   '',
+                   '',
+                   ''
+                 ], 'Package::FullBaseInstallDirEntry' ),
+          bless( [
+                   $VAR1->[0][0],
+                   'avs',
+                  '/app/jboss/server/aas',
+                   'buildOp/aas/aas-2008-2/qa-aas01-be/packaging/customize/CustomizeInit_AAS_CONFIG_INSTALL.pl',
+                   'AVS Files',
+                   '',
+                   '',
+                   '',
+                   ''
+                 ], 'Package::FullBaseInstallDirEntry' ),
+          bless( [
+                   $VAR1->[0][0],
+                   'cat',
+                  '/app/jboss/server/aas',
+                   'buildOp/aas/aas-2008-2/qa-aas01-be/packaging/customize/CustomizeInit_AAS_CONFIG_INSTALL.pl',
+                   'CAT Files',
+                   '',
+                   '',
+                   'bin/jbossctlstart',
+                   '.'
+                 ], 'Package::FullBaseInstallDirEntry' ),
+          bless( [
+                   $VAR1->[0][0],
+                   'eng_celp_qm_start',
+                   '/app/celp_qm_start',
+                   'buildOp/aas/aas-2008-2/qa-aas01-be/packaging/customize/CustomizeInit_JCELP_QM_CONFIG_INSTALL.pl',
+                   '',
+                   '',
+                   '',
+                   'bin/qm_start.sh',
+                   '.'
+                 ], 'Package::FullBaseInstallDirEntry' ),
+        ];

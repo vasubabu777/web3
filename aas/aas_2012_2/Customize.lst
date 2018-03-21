@@ -1,0 +1,11 @@
+$VAR1=[
+ '/u/build/build1/buildOp/aas/aas_2012_2/aas1be-m1-ap/CustomizeInit.pl',
+ '/u/build/build1/buildOp/aas/aas_2012_2/aas2be-m1-ap/CustomizeInit.pl',
+ '/u/build/build1/buildOp/aas/aas_2012_2/aas3be-m1-ap/CustomizeInit.pl',
+ '/u/build/build1/buildOp/aas/aas_2012_2/aas4be-m2-ap/CustomizeInit.pl',
+ '/u/build/build1/buildOp/aas/aas_2012_2/bldrm-dev-build/buildOp_aas_2012_2_bamboo_junit_japorenterprise.conf.template',
+ '/u/build/build1/buildOp/aas/aas_2012_2/bldrm-dev-build/buildOp_aas_2012_2_bamboo_junit_jadmsenterprise.conf.template',
+ '/u/build/build1/buildOp/aas/aas_2012_2/lnx8-build/buildOp_aas_2012_2_bamboo.conf.template',
+ '/u/build/build1/buildOp/aas/aas_2012_2/testlabs/capfile.PV',
+ '/u/build/build1/buildOp/aas/aas_2012_2/testlabs/capfile' ];
+$VAR1;

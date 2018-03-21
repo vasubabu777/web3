@@ -1,0 +1,112 @@
+set :use_sudo, false
+
+if ENV['BUILD_NUMBER'].to_s.empty?
+  build_number = "latest"
+else 
+  build_number =  ENV['BUILD_NUMBER']
+end
+
+set :release, "aas_2009_1_ILG"
+set :build, "/u/build/build3/aas/#{release}/lnx8-build/latest"
+set :staging, "/remoteInstall/#{release}" 
+set :jboss_home, "/app/jboss"
+set :qm_home, "/ecas/qm"
+
+task :aas1_be, :hosts => "pin@10.207.148.26" do 
+# Create staging directories and remove old packages if existed
+  run "mkdir -p #{staging}/buildOp #{staging}/productionPackaging"
+  run "rm -rf #{staging}/productionPackaging/*"
+
+# Copy packages
+  set :packages, [ 
+  { :package_tag => "jbossconf", :package_name => "#{release}_jbossconf.tar", :install_path => "#{jboss_home}/server/aas", :customizable => "no" }, 
+  { :package_tag => "domain", :package_name => "#{release}_domain.tar", :install_path => "#{jboss_home}/server/aas", :customizable => "yes" }, 
+  { :package_tag => "adms", :package_name => "#{release}_adms.tar", :install_path => "#{jboss_home}/server/aas", :customizable => "yes" }, 
+  { :package_tag => "apor", :package_name => "#{release}_apor.tar", :install_path => "#{jboss_home}/server/aas", :customizable => "yes" }, 
+  { :package_tag => "avs", :package_name => "#{release}_avs.tar", :install_path => "#{jboss_home}/server/aas", :customizable => "yes" }, 
+  { :package_tag => "cat", :package_name => "#{release}_cat.tar", :install_path => "#{jboss_home}/server/aas", :customizable => "yes" }, 
+  ]
+
+  packages.each { |x|
+     upload  "#{build}/productionPackaging/#{release}/" + x[:package_name], "#{staging}/productionPackaging/", :via => :scp
+  }
+
+# Copy customization file
+  upload "#{build}/buildOp/aas/#{release}/aas1-be/", "#{staging}/buildOp/", :via => :scp, :recursive => true
+
+# Stop Jboss server 
+  run "#{jboss_home}/server/aas/bin/jbossctl stop"
+
+# Create the application directory
+  run "mkdir -p /app/vrsn/aas_#{build_number}"
+
+# Move link
+  run "rm -f #{jboss_home}/server/aas; ln -s  /app/vrsn/aas_#{build_number} #{jboss_home}/server/aas"
+
+# Install and customize packages
+  packages.each { |x|
+     run "cd #{x[:install_path]}; tar xvf #{staging}/productionPackaging/" + x[:package_name]
+     if x[:customizable] == "yes"
+       run "cd #{x[:install_path]}/customizer/#{x[:package_tag]}; cp #{staging}/buildOp/aas1-be/CustomizeInit.pl vars.dat; ./setConfig.sh"
+     end
+  }
+
+# Customize the not-customizable jbossconf package
+#  run "cd #{jboss_home}/server/aas;  #{staging}/buildOp/aas1-be/Customize.pl -F #{staging}/buildOp/aas1-be/CustomizeInit.pl -L #{staging}/buildOp/aas1-be/Customize.lst"
+
+# Post installation tasks
+# For ADMS
+  run "cp #{jboss_home}/server/aas/vsconfig/adms.xml #{jboss_home}/server/aas/conf/vsconfig"
+# For APOR
+  run "cp #{jboss_home}/server/aas/vsconfig/apor.xml #{jboss_home}/server/aas/conf/vsconfig"
+  run "touch #{jboss_home}/server/aas/vsconfig/euroIPStopper"
+  run "cd  #{jboss_home}/server/aas/conf/vsconfig; cp provider_DNB.properties provider_DNB.properties.bk"
+  run "perl -pi -e 's|globalaccess.dnb.com|toolkit.dnb.com|s' #{jboss_home}/server/aas/vsconfig/provider_DNB.properties"
+# For AVS
+  run "cp #{jboss_home}/server/aas/vsconfig/avs.xml #{jboss_home}/server/aas/conf/vsconfig"
+# For CAT
+  run "cp -r #{jboss_home}/server/aas/vsconfig/cat #{jboss_home}/server/aas/conf/vsconfig"
+  
+# Start Jboss server
+  run "#{jboss_home}/server/aas/bin/jbossctl start"
+
+end
+
+task :mmr3_be, :hosts => "pin@10.207.150.95" do 
+# Create staging directories and remove old packages if existed
+  run "mkdir -p #{staging}/buildOp #{staging}/productionPackaging"
+  run "rm -rf #{staging}/productionPackaging/*"
+
+# Copy packages
+  set :packages, [ 
+  { :package_tag => "jbossconf", :package_name => "#{release}_jbossconf.tar", :install_path => "#{jboss_home}/server/aas", :customizable => "no" }, 
+  { :package_tag => "domain", :package_name => "#{release}_domain.tar", :install_path => "#{jboss_home}/server/aas", :customizable => "yes" }, 
+  { :package_tag => "adms", :package_name => "#{release}_adms.tar", :install_path => "#{jboss_home}/server/aas", :customizable => "yes" }, 
+  { :package_tag => "apor", :package_name => "#{release}_apor.tar", :install_path => "#{jboss_home}/server/aas", :customizable => "yes" }, 
+  { :package_tag => "avs", :package_name => "#{release}_avs.tar", :install_path => "#{jboss_home}/server/aas", :customizable => "yes" }, 
+  { :package_tag => "cat", :package_name => "#{release}_cat.tar", :install_path => "#{jboss_home}/server/aas", :customizable => "yes" }, 
+  ]
+
+  packages.each { |x|
+     upload  "#{build}/productionPackaging/#{release}/" + x[:package_name], "#{staging}/productionPackaging/", :via => :scp
+  }
+
+# Stop qm
+  run "cd ${qm_home}/bin; ./stop_qm -n AAS"
+
+# Create the qm sql directory
+  run "mkdir -p ${qm_home}/AAS/#{build_number}"
+
+# Install packages
+  packages.each { |x|
+     run "cd #{x[:install_path]}; tar xvf #{staging}/productionPackaging/" + x[:package_name]
+  }
+
+# Move link
+  run "rm -f ${qm_home}/AAS/data; ln -s  ${qm_home}/AAS/#{build_number}/data #{qm_home}/AAS/data"
+
+# Start QM
+  run "cd ${qm_home}/bin; ./start_qm -n AAS"
+
+end
+

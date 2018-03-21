@@ -1,0 +1,4 @@
+$VAR1 = ['/local/ldavid/release/aas/buildOp/aas/aas_mmr_2009_0_1/lnx3-build/buildOp_aas_mmr_2009_0_1.conf',
+ '/local/ldavid/release/aas/buildOp/aas/aas_mmr_2009_0_1/lnx3-build/buildOp_aas_mmr_2009_0_1.qa.rox.conf',
+ '/local/ldavid/release/aas/buildOp/aas/aas_mmr_2009_0_1/whitney/buildOp_aas_mmr_2009_0_1.conf'];
+$VAR1;

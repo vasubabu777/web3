@@ -1,0 +1,417 @@
+
+use File::Spec;
+
+my $checkOutOptionComment = << 'EOCOMMENT';
+This flag is used to check out the
+paths specified by the 'coTagHash' key in the
+config file.  If a value is specified for a key,
+that indicates the version of the path which
+should be checked out.
+EOCOMMENT
+
+my $createOptionComment = << 'EOCOMMENT';
+This flag is used to create the work-products
+in the directory specified by the 'createDirArray'
+key using the 'createCmd' key.
+EOCOMMENT
+
+my $packageOptionComment = << 'EOCOMMENT';
+This flag is used to package the work-products
+EOCOMMENT
+
+my $symlinkOptionComment = << 'EOCOMMENT';
+This flag is used to create symlinks.
+EOCOMMENT
+
+my $symlinkLatestOptionComment = << 'EOCOMMENT';
+This flag is used to create latest symlink.
+EOCOMMENT
+
+my $checkOutMultipleComment = << 'EOCOMMENT';
+This flag is used to check out the
+from various repositories
+EOCOMMENT
+
+my $createMultipleOptionComment = << 'EOCOMMENT';
+This flag is used to create the work-products
+using multiple creation commands.
+EOCOMMENT
+
+my $multipleSvnCheckOut = << 'EOCOMMENT';
+This flag is used to checkout multiple svn urls
+EOCOMMENT
+
+my $cwd = File::Spec->rel2abs ( File::Spec->curdir());
+my $ant_home = "/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/ant/versions/1.7.1";
+my $java_home = "/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/java/versions/jdk1.7.0_21";
+my $envHash = {
+      'ANT_HOME' => "$ant_home",
+      'JAVA_HOME' => "$java_home",
+      'PATH' => "$java_home/bin:$ant_home/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/bin:/usr/bin:/bin"
+      };
+
+
+$VAR1 =
+  {
+   # config keys
+
+   'baseBuildDir' => '/u/build/build3/aas',
+   'buildName' => 'aas_2014_4_1_1',
+   'forceNewBuildDir' => 1,
+   #'doNotCreateSyncFlagDir' => 1,
+#   'mailArray' => [qw ( bldgrp eng-webtrust web-trust-qa )],
+   'logDir' => '/u/build/build1/buildOp/aas/aas_2014_4_1_1/lnx8-build/logDir',
+   'syncFlagBaseDir' => '/u/build/build1/buildOp/aas/aas_2014_4_1_1/syncDir',
+#  'fullBuildPath'   => '',
+#  'fullLogFile'     => '',
+#  'fullErrLogFile'  => '',
+   'fullBuildPath'   => '%(fullBuildPath)s',
+   'fullLogFile'     => '%(fullLogFile)s',
+   'fullErrLogFile'  => '%(fullErrLogFile)s',
+
+   # check out svn multiple keys
+   'checkOutMultipleSvnArray' =>
+   [
+        {
+         'coEnvHash' =>
+         {
+          'PATH' => '/app/oracle/ORAHOME/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/share/java/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/share/ant/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/bin:/usr/bin:/usr/local/bin:/bin:/home/ldavid/bin',
+          'LD_LIBRARY_PATH' => '/app/oracle/ORAHOME/lib:/usr/lib:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/lib'
+         },
+         'svnCmd' => 'svn co',
+         'coUrlHashArray' =>
+         [
+          {
+            'url' => 'http://subversion-lnx.qa.shared-bo.mtv1.vrsn.com/svnroot/aas/branches/aas_2014_4_1_1/aas-service',
+            'path' => 'aas-service'
+          },
+         ],
+         'username' => 'buildman',
+         'password' => '4buildfru',
+        },
+        {
+         'coEnvHash' =>
+         {
+          'PATH' => '/app/oracle/ORAHOME/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/share/java/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/share/ant/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/bin:/usr/bin:/usr/local/bin:/bin:/home/ldavid/bin',
+          'LD_LIBRARY_PATH' => '/app/oracle/ORAHOME/lib:/usr/lib:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/lib'
+         },
+         'svnCmd' => 'svn co',
+         'coUrlHashArray' =>
+         [
+          {
+            'url' => 'http://subversion-lnx.qa.shared-bo.mtv1.vrsn.com/svnroot/aas/branches/aas_2014_4_1_1/japor',
+            'path' => 'japor'
+          },
+         ],
+         'username' => 'buildman',
+         'password' => '4buildfru',
+        },
+        {
+         'coEnvHash' =>
+         {
+          'PATH' => '/app/oracle/ORAHOME/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/share/java/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/share/ant/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/bin:/usr/bin:/usr/local/bin:/bin:/home/ldavid/bin',
+          'LD_LIBRARY_PATH' => '/app/oracle/ORAHOME/lib:/usr/lib:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/lib'
+         },
+         'svnCmd' => 'svn co',
+         'coUrlHashArray' =>
+         [
+          {
+            'url' => 'http://subversion-lnx.qa.shared-bo.mtv1.vrsn.com/svnroot/aas/branches/aas_2014_4_1_1/jadms',
+            'path' => 'jadms'
+          },
+         ],
+         'username' => 'buildman',
+         'password' => '4buildfru',
+        },
+        {
+         'coEnvHash' =>
+         {
+          'PATH' => '/app/oracle/ORAHOME/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/share/java/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/share/ant/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/bin:/usr/bin:/usr/local/bin:/bin:/home/ldavid/bin',
+          'LD_LIBRARY_PATH' => '/app/oracle/ORAHOME/lib:/usr/lib:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/lib'
+         },
+         'svnCmd' => 'svn co',
+         'coUrlHashArray' =>
+         [
+          {
+            'url' => 'http://subversion-lnx.qa.shared-bo.mtv1.vrsn.com/svnroot/aas/branches/aas_2014_4_1_1/javs',
+            'path' => 'javs'
+          },
+         ],
+         'username' => 'buildman',
+         'password' => '4buildfru',
+        },
+        {
+         'coEnvHash' =>
+         {
+          'PATH' => '/app/oracle/ORAHOME/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/share/java/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/share/ant/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/bin:/usr/bin:/usr/local/bin:/bin:/home/ldavid/bin',
+          'LD_LIBRARY_PATH' => '/app/oracle/ORAHOME/lib:/usr/lib:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/lib'
+         },
+         'svnCmd' => 'svn co',
+         'coUrlHashArray' =>
+         [
+          {
+            'url' => 'http://subversion-lnx.qa.shared-bo.mtv1.vrsn.com/svnroot/aas/branches/aas_2014_4_1_1/jcat',
+            'path' => 'jcat'
+          },
+         ],
+         'username' => 'buildman',
+         'password' => '4buildfru',
+        },
+        {
+         'coEnvHash' =>
+         {
+          'PATH' => '/app/oracle/ORAHOME/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/share/java/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/share/ant/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/bin:/usr/bin:/usr/local/bin:/bin:/home/ldavid/bin',
+          'LD_LIBRARY_PATH' => '/app/oracle/ORAHOME/lib:/usr/lib:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/lib'
+         },
+         'svnCmd' => 'svn co',
+         'coUrlHashArray' =>
+         [
+          {
+            'url' => 'http://subversion-lnx.qa.shared-bo.mtv1.vrsn.com/svnroot/aas/branches/aas_2014_4_1_1/japorEnterprise',
+            'path' => 'japorEnterprise'
+          },
+         ],
+         'username' => 'buildman',
+         'password' => '4buildfru',
+        },
+        {
+         'coEnvHash' =>
+         {
+          'PATH' => '/app/oracle/ORAHOME/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/share/java/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/share/ant/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/bin:/usr/bin:/usr/local/bin:/bin:/home/ldavid/bin',
+          'LD_LIBRARY_PATH' => '/app/oracle/ORAHOME/lib:/usr/lib:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/lib'
+         },
+         'svnCmd' => 'svn co',
+         'coUrlHashArray' =>
+         [
+          {
+            'url' => 'http://subversion-lnx.qa.shared-bo.mtv1.vrsn.com/svnroot/aas/branches/aas_2014_4_1_1/jadmsEnterprise',
+            'path' => 'jadmsEnterprise',
+          },
+         ],
+         'username' => 'buildman',
+         'password' => '4buildfru',
+        },
+        {
+         'coEnvHash' =>
+         {
+          'PATH' => '/app/oracle/ORAHOME/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/share/java/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/share/ant/bin:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/bin:/usr/bin:/usr/local/bin:/bin:/home/ldavid/bin',
+          'LD_LIBRARY_PATH' => '/app/oracle/ORAHOME/lib:/usr/lib:/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/lib'
+         },
+         'svnCmd' => 'svn co',
+         'coUrlHashArray' =>
+         [
+          {
+            'url' => 'http://subversion-lnx.qa.shared-bo.mtv1.vrsn.com/svnroot/aas/branches/aas_2014_4_1_1/aas_common',
+            'path' => 'aas_common',
+          },
+         ],
+         'username' => 'buildman',
+         'password' => '4buildfru',
+        }
+
+   ],
+
+   # check out multiple keys
+
+   'checkOutMultipleArray' =>
+   [
+        {
+         'coEnvHash' =>
+         {
+          'CVSROOT' => 'buildman@subversion-lnx.qa.shared-bo.mtv1.vrsn.com:/cvs',
+          'CVS_RSH' => '/usr/bin/ssh'
+         },
+         'coCmd' => 'cvs co',
+         'coTagHashArray' =>
+         [
+          { 'path' => 'jbuild',         'tag' => 'aas_2014_4_1_1' },
+          { 'path' => 'jexternal',      'tag' => 'aas_2014_4_1_1' },
+          { 'path' => 'jcommon',        'tag' => 'aas_2014_4_1_1' }
+         ]
+        }
+   ],
+
+
+   # link keys
+
+   'symlinkHash' =>
+   {
+    '/u/build/build2/qm/solaris/qm_v3_0/latest/platform' => undef,
+   },
+
+   # create keys
+
+   'createDirArray' => [ 'jcommon'],
+   'createCmd' => 'ant all',
+
+ #  'createCmd' => 'env; which java; java -version ; which ant ',
+   'createRelPathEnvHash' =>
+   {
+    'ECAS_CUSTOM_CFG' => 'build/make/custom/SunOS55.cfg'
+   },
+   'createReplEnvHash' =>
+   {
+
+      'ANT_HOME' => "$ant_home",
+      'JAVA_HOME' => "$java_home",
+      'PATH' => "$java_home/bin:/usr/bin:/bin:/u/build/build1/engtools/linux/2.4.9-e.24/gnu/bin:$ant_home/bin",
+    'CLASSPATH' => '<BUILD_DIR>/jcommon/lib/commonsupport.jar:<BUILD_DIR>/jexternal/regexp/jakarta-regexp-1.2.jar:<BUILD_DIR>/jexternal/xerces/xerces.jar:<BUILD_DIR>/jexternal/xalan/xalan.jar:<BUILD_DIR>/jcommon/classes:<BUILD_DIR>/jexternal/junit/junit.jar:<BUILD_DIR>/jexternal/javamail/jmail1_2.jar:<BUILD_DIR>/jexternal/jce/US_export_policy.jar:<BUILD_DIR>/jexternal/jce/jce1_2_1.jar:<BUILD_DIR>/jexternal/jce/local_policy.jar:<BUILD_DIR>/jexternal/jce/sunjce_provider.jar:<BUILD_DIR>/jexternal/jsafe/certj.jar:<BUILD_DIR>/jexternal/jsafe/jsafe.jar:<BUILD_DIR>/jexternal/jsafe/jsafeJCE.jar:<BUILD_DIR>/jexternal/jsafe/sslj.jar:<BUILD_DIR>/jexternal/jsse/jcert.jar:<BUILD_DIR>/jexternal/jsse/jnet.jar:<BUILD_DIR>/jexternal/jsse/jsse.jar:<BUILD_DIR>/jexternal/log4j/log4j-core.jar:<BUILD_DIR>/jexternal/log4j/log4j.jar:<BUILD_DIR>/jexternal/jboss/aas/lib/jboss-j2ee.jar:/usr/bea/wlserver6.0/lib/xmlx.jar:<BUILD_DIR>/jexternal/xalan/xml-apis.jar:<BUILD_DIR>/jexternal/servlet/servlet.jar:<BUILD_DIR>/jexternal/xalan/mime2java.jar:<BUILD_DIR>/jexternal/xalan/xercesImpl.jar:<BUILD_DIR>/jexternal/dnb/DnBGlobalAccess.zip:<BUILD_DIR>/jcommon/lib/vsconfigstuff.jar:<BUILD_DIR>/jcommon/lib/jcommon_servlets.jar:<BUILD_DIR>/jexternal/struts/commons-logging.jar'
+    },
+
+
+  # create multiple keys
+
+   'createMultipleArray' =>
+   [
+#    {
+#     'createDir' => 'jcommon',
+#     'createCmd' => 'ant all',
+#     'createEnvHash' => $envHash
+#    },
+    {
+     'createDir' => 'jadms',
+     'createCmd' => 'ant clean makelib',
+     'createEnvHash' => $envHash
+    },
+    {
+     'createDir' => 'jadmsEnterprise',
+     'createCmd' => 'ant all',
+     'createEnvHash' => $envHash
+    },
+    {
+     'createDir' => 'japor',
+     'createCmd' => 'ant makelib remove_tmps sos-jars-build-all',
+     'createEnvHash' => $envHash
+    },
+    {
+     'createDir' => 'japorEnterprise',
+     'createCmd' => 'ant all',
+     'createEnvHash' => $envHash
+    },
+    {
+     'createDir' => 'javs',
+     'createCmd' => 'ant all',
+     'createEnvHash' => $envHash
+    },
+    {
+     'createDir' => 'jcat',
+     'createCmd' => 'ant all',
+     'createEnvHash' => $envHash
+    },
+    {
+     'createDir' => 'aas-service',
+     'createCmd' => 'ant clean makelib',
+     'createEnvHash' => $envHash
+    },
+   ],
+
+
+
+
+   # package keys
+
+
+   'pkgClass' => 'Package::Format::Tar',
+   'pkgRelBaseDirArrayPath' => 'jbuild/packaging/BaseDirArray.autoauth',
+   'pkgRelFullBaseInstDirArrayPath' => 'jbuild/packaging/FullBaseInstallDirArray.autoauth',
+   'pkgPathArray' => [qw (
+      jexternal
+      jcommon
+      jadms
+      jcat
+      javs
+      japor
+      japorEnterprise
+      jadmsEnterprise
+      aas_common
+      aas-service
+   )],
+
+     'pkgGenPkgSummaryCmd' => '/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/bin/gen_pkg_summary.py',
+     'cmpToYamlCmd' => '/u/build/build1/engtools/linux/2.6.18-8.el5/x86_64/global/bin/cmp_to_yml.pl',
+
+
+
+   # operation manager keys
+
+   'opHash' =>
+   {
+    'CheckOut' =>
+    {
+     'option' => '-co',
+     'optionComment' => $checkOutOptionComment,
+     'optionConstraint' => '',
+     'package' => 'Build::CheckOut::Base',
+     'method' => 'checkOut',
+     'mailArray' => [ qw( )]
+    },
+    'Create' =>
+    {
+     'option' => '-cr',
+     'optionComment' => $createOptionComment,
+     'optionConstraint' => '',
+     'package' => 'Build::Create::Base',
+     'method' => 'create',
+     'mailArray' => [ qw ( )]
+    },
+    'Package' =>
+    {
+     'option' => '-p',
+     'optionComment' => $packageOptionComment,
+     'optionConstraint' => '',
+     'package' => 'Build::Package::Base',
+     'method' => 'package',
+     'mailArray' => [ qw ( )]
+    },
+    'Symlink' =>
+    {
+     'option' => '-l',
+     'optionComment' => $symlinkOptionComment,
+     'optionConstraint' => '',
+     'package' => 'Build::Symlink::Base',
+     'method' => 'createSymlink',
+     'mailArray' => [ qw ( )]
+    },
+        'SymlinkLatest' =>
+        {
+         'option' => '-l',
+         'optionComment' => $symlinkLatestOptionComment,
+         'optionConstraint' => '',
+         'package' => 'Build::Symlink::Latest',
+         'method' => 'createSymlink',
+         'mailArray' => [ qw (  )]
+        },
+        'CheckOutMultiple' =>
+        {
+         'option' => '-cm',
+         'optionComment' => $checkOutMultipleComment,
+         'optionConstraint' => '',
+         'package' => 'Build::CheckOut::Multiple',
+         'method' => 'checkOutMultiple',
+         'mailArray' => [ qw(  )]
+        },
+        'CreateMultiple' =>
+        {
+         'option' => '-cm',
+         'optionComment' => $createMultipleOptionComment,
+         'optionConstraint' => '',
+         'package' => 'Build::Create::Multiple',
+         'method' => 'createMultiple',
+         'mailArray' => [ qw (  )]
+        },
+    'CheckOutMultipleSvn' =>
+    {
+     'option' => '-ms',
+     'optionComment' => $multipleSvnCheckOut,
+     'optionConstraint' => '',
+     'package' => 'Build::CheckOut::MultipleSvn',
+     'method' => 'checkOutMultipleSvn',
+     'mailArray' => [ qw (  )]
+    },
+
+   },
+#    'opArray' => [qw ( CheckOutMultiple Symlink Create CreateMultiple Package SymlinkLatest )]
+#    'opArray' => [qw ( CheckOutMultiple CheckOutMultipleSvn Symlink Create Package SymlinkLatest )]
+#    'opArray' => [qw ( CheckOutMultiple CheckOutMultipleSvn Symlink Create Package SymlinkLatest )]
+    'opArray' => [qw ( CheckOutMultiple CheckOutMultipleSvn Symlink Create CreateMultiple Package SymlinkLatest )]
+  };

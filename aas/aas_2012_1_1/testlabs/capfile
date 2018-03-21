@@ -1,0 +1,387 @@
+# vim: filetype=ruby
+require '/u/build/build1/testlabs/lib/installer.rb'
+
+###############################
+## Release notes:
+## https://fusion.qa.shared-bo.mtv1.vrsn.com/display/SSL/SSL+2012-1-1+Release
+##
+## Manual changes
+###############################
+
+set :release, "aas_2012_1_1"
+set :is_full, "false"
+set :build_dir, "/u/build/build3/aas/#{release}/lnx8-build/#{build_number}"
+set :logpath , "/u/build/build1/buildOp/aas/#{release}/testlabs/logDir"
+set :be_install_dir, "/app/vrsn"
+load '/u/build/build1/testlabs/lib/commontask.cap' #SHARED TASKS
+set :staging, "/remoteInstall/#{release}/#{build_number}"
+set :stage_dir, "#{build_number}.staging"
+set :monitor_install_dir, "/app/monitors/current/aas"
+set :monitor_staging, "/remoteInstall/monitor_#{release}/#{build_number}"
+
+@mailarray = ['DL-VSN-vss-testlabs@symantec.com','DL-VSN-SSLQAEDCNotification@symantec.com']
+set :timestamp, Time.now.strftime("%Y%m%d%H%M")
+
+#SWITCH 
+case testbed
+   when "aas1"
+     role :app, "pin@aas1be-m1-ap"
+     role :web, "pin@aas1fe-m1-wb"
+     role :qm, "pin@mmr1qmbe-m1-ap"
+     role :nagios, "nagios@aas1be-m1-ap"
+     qm_instances = ['AAS1']
+     qm_install_dir = "/app/data/sql/AAS/AAS1"
+     emailsubj = "AAS1"
+     emailtemplate = load_email_template("aas1.mail")
+   when "aas2"
+     role :app, "pin@aas2be-m1-ap"
+     role :web, "pin@aas2fe-m1-wb"
+     role :qm, "pin@mmr1qmbe-m1-ap"
+     role :nagios, "nagios@aas2be-m1-ap"
+     qm_instances = ['AAS2']
+     qm_install_dir = "/app/data/sql/AAS/AAS2"
+     emailsubj = "AAS2"
+     emailtemplate = load_email_template("aas2.mail")
+   when "aas3"
+     role :app, "pin@aas3be-m1-ap"
+     role :web, "pin@aas3fe-m1-wb"
+     role :qm, "pin@mmr1qmzn1be-m1-ap"
+     role :nagios, "nagios@aas3be-m1-ap"
+     qm_instances = ['AAS3']
+     qm_install_dir = "/app/data/sql/AAS/AAS3"
+     emailsubj = "AAS3"
+     emailtemplate = load_email_template("aas3.mail")
+   when "aas4"
+     role :app, "pin@aas4be-m2-ap"
+     role :web, "pin@aas4fe-m2-wb"
+     role :qm, "pin@mmr1qmzn2be-m1-ap"
+     role :nagios, "nagios@aas4be-m2-ap"
+     qm_instances = ['AAS4']
+     qm_install_dir = "/app/data/sql/AAS/AAS4"
+     emailsubj = "AAS4"
+     emailtemplate = load_email_template("aas4.mail")
+   else
+     puts "Invalid testbed #{testbed}"
+     exit 1
+end
+
+set :qm_packages, [ 
+    { :package_tag => "aas_sql", :install_path => "#{qm_install_dir}/#{stage_dir}", :customizable => "no" }, 
+]
+
+set :be_packages, [ 
+#    { :package_tag => "jbossconf", :install_path => "#{be_install_dir}/#{stage_dir}", :customizable => "no" }, 
+    { :package_tag => "config", :install_path => "#{be_install_dir}/#{stage_dir}", :customizable => "yes" }, 
+    { :package_tag => "app", :install_path => "#{be_install_dir}/#{stage_dir}", :customizable => "no" }, 
+]
+ 
+set :monitor_packages, [ 
+    { :package_tag => "timermonitor", :install_path => "#{monitor_install_dir}/#{testbed}_#{stage_dir}", :customizable => "no" }, 
+]
+
+desc "Install all AAS components: QM, BE"
+task :install do
+  begin
+#      stage_qm
+#      swap_qm_install
+      stage
+      swap_install
+#      stage_monitor
+#      swap_monitor_install
+  rescue Exception => error
+     install_status("1",emailtemplate,emailsubj)
+     exit 1
+  end
+     install_status("0",emailtemplate,emailsubj)
+end
+
+desc "Install QM sql files"
+task :stage_qm, :roles => :qm do 
+# Create staging directories and remove old packages if existed
+  staging_prep(staging, release)
+
+# Copy packages
+  qm_packages.each { |x|
+     upload  "#{build_dir}/productionPackaging/#{release}/#{release}_" + x[:package_tag] + ".tar", "#{staging}/productionPackaging/", :via => :scp
+     upload  "#{build_dir}/productionPackaging/#{release}/#{release}_" + x[:package_tag] + ".md5", "#{staging}/productionPackaging/", :via => :scp
+  }
+
+  print "\nINFO: QM files transfer complete \n\n"
+
+# Create new build directory
+  stage_prep(qm_install_dir, build_number) 
+
+# Taking care of the previous link
+  move_previous("#{qm_install_dir}","sqlTemplates")
+
+# Overlay installs copy from previous
+  if "#{is_full}" == "false"
+    run "cd #{qm_install_dir}/previous; find . -depth | cpio -pdmv ../#{stage_dir}"
+  end
+
+# Install packages
+  qm_packages.each { |x|
+     run "cd #{x[:install_path]}; tar xvfp #{staging}/productionPackaging/#{release}_" + x[:package_tag] + ".tar"
+  }
+
+  print "\nINFO: QM stage complete \n\n"
+
+end
+
+desc "Relink to new QM sql files"
+task :swap_qm_install, :roles => :qm do
+# Stop QM
+  stop_qm
+
+# Move current link to Backups
+  currentlink = capture("readlink #{qm_install_dir}/sqlTemplates | cut -f1 -d/").strip
+  previouslink = capture("readlink #{qm_install_dir}/previous | cut -f1 -d/").strip
+  if "#{currentlink}" != "#{previouslink}"
+    run "cd #{qm_install_dir}; mv #{currentlink} Backups/#{currentlink}_#{timestamp}"
+    print "\nINFO: Moved #{currentlink} to Backups\n\n"
+  end
+
+# Recreate new link
+  run "cd #{qm_install_dir}; mv #{stage_dir} #{build_number}; rm -f sqlTemplates; ln -s #{build_number} sqlTemplates"
+
+# Start QM
+  start_qm
+
+# Remove old backups
+  clean_backups("#{qm_install_dir}/Backups",3,"#{release}")
+
+  print "\nINFO: Relink QM complete \n\n"
+
+end
+
+desc "Install AAS Jboss files"
+task :stage, :roles => :app do 
+# Create staging directories and remove old packages if existed
+  staging_prep(staging, release)
+
+# Copy packages
+  be_packages.each { |x|
+     upload  "#{build_dir}/productionPackaging/#{release}/#{release}_" + x[:package_tag] + ".tar", "#{staging}/productionPackaging/", :via => :scp
+     upload  "#{build_dir}/productionPackaging/#{release}/#{release}_" + x[:package_tag] + ".md5", "#{staging}/productionPackaging/", :via => :scp
+  }
+
+# Copy customization file
+  upload "/u/build/build1/buildOp/aas/#{release}/$CAPISTRANO:HOST$/CustomizeInit.pl", "#{staging}/CustomizeInit.pl", :via => :scp
+
+  print "\nINFO: BE files transfer complete \n\n"
+
+# Create new build directory
+  stage_prep(be_install_dir, build_number) 
+
+# Taking care of the previous link
+  move_previous("#{be_install_dir}","aas")
+
+# Overlay installs copy from previous
+  if "#{is_full}" == "false"
+   run "cd #{be_install_dir}/previous; find . -depth | cpio -dpmv #{be_install_dir}/#{stage_dir}"
+  else
+  # Link log directory 
+   run "mkdir -p #{be_install_dir}/#{stage_dir}/aas; cd #{be_install_dir}/#{stage_dir}/aas; ln -s /app/logs/aas log"
+  end
+
+# Install and customize packages
+  be_packages.each { |x|
+     run "cd #{x[:install_path]}; tar xvfp #{staging}/productionPackaging/#{release}_" + x[:package_tag] + ".tar"
+     if x[:customizable] == "yes"
+       run "cd #{x[:install_path]}; perl #{be_install_dir}/customize/Customize.pl -F #{staging}/CustomizeInit.pl"
+     end
+  }
+
+  print "\nINFO: BE stage complete \n\n"
+
+end
+
+desc "Relink AAS Jboss files"
+task :swap_install, :roles => :app do
+# Stop AAS Jboss
+   stop_app
+
+# Move current link to Backups
+   currentlink = capture("readlink #{be_install_dir}/aas | cut -f1 -d/ ").strip
+   previouslink = capture("readlink #{be_install_dir}/previous | cut -f1 -d/ ").strip
+   if "#{currentlink}" != "#{previouslink}"
+    run "cd #{be_install_dir}; mv #{currentlink} Backups/#{currentlink}_#{timestamp}"
+    print "\nINFO: Moved #{currentlink} to Backups\n\n"
+   end
+
+# Recreate new link
+   run "cd #{be_install_dir}; mv #{stage_dir} #{build_number}; rm -f aas; ln -s  #{build_number} aas"
+
+# Start AAS Jboss
+   start_app
+
+# Remove old backups
+   clean_backups("#{be_install_dir}/Backups",3,"#{release}")
+
+   print "\nINFO: BE relink complete\n\n"
+
+end
+
+desc "Install AAS monitor"
+task :stage_monitor, :roles => :nagios do
+# Create staging directories and remove old packages if existed
+  staging_prep(monitor_staging, "#{testbed}_#{release}")
+
+# Copy packages
+  monitor_packages.each { |x|
+     upload  "#{build_dir}/productionPackaging/#{release}/#{release}_" + x[:package_tag] + ".tar", "#{monitor_staging}/productionPackaging/", :via => :scp
+     upload  "#{build_dir}/productionPackaging/#{release}/#{release}_" + x[:package_tag] + ".md5", "#{monitor_staging}/productionPackaging/", :via => :scp
+  }
+
+# Copy customization file
+  upload "/u/build/build1/buildOp/aas/#{release}/$CAPISTRANO:HOST$/CustomizeInit.pl", "#{monitor_staging}/CustomizeInit.pl", :via => :scp
+
+  print "\nINFO: Monitor files transfer complete \n\n"
+
+# Create new build directory
+  stage_prep("#{monitor_install_dir}", "#{testbed}_#{build_number}") 
+
+# Taking care of the previous link
+  move_previous("#{monitor_install_dir}", "#{testbed}")
+
+# Overlay installs copy from previous
+  if "#{is_full}" == "false"
+   run "cd #{monitor_install_dir}/previous; find . -depth | cpio -dpmv #{monitor_install_dir}/#{testbed}_#{stage_dir}"
+  end
+
+# Install and customize packages
+  monitor_packages.each { |x|
+     run "cd #{x[:install_path]}; tar xvfp #{monitor_staging}/productionPackaging/#{release}_" + x[:package_tag] + ".tar"
+     if x[:customizable] == "yes"
+       run "cd #{x[:install_path]}; /ecas/customize/Customize.pl -F #{monitor_staging}/CustomizeInit.pl;"
+     end
+  }
+
+# Since not customizable making manual change
+  run "perl -pi -e 's|./server.log|/app/jboss/server/aas/log/server.log|g' #{monitor_install_dir}/#{testbed}_#{stage_dir}/monitor/appAlert.cfg"
+  run "perl -pi -e 's|./appAlert.log|/app/logs/monitor/appAlert.log|g' #{monitor_install_dir}/#{testbed}_#{stage_dir}/monitor/appAlert.cfg"
+
+  print "\nINFO: Monitor stage complete\n\n"
+
+end
+
+desc "Link new AAS monitor build"
+task :swap_monitor_install, :roles => :nagios do
+# Move current link to Backups
+   if remote_file_exists?("#{monitor_install_dir}/#{testbed}") then
+     currentlink = capture("readlink #{monitor_install_dir}/#{testbed} | cut -f1 -d/ ").strip
+     previouslink = capture("readlink #{monitor_install_dir}/previous | cut -f1 -d/ ").strip
+     if "#{currentlink}" != "#{previouslink}"
+       run "cd #{monitor_install_dir}; mv #{currentlink} Backups/#{currentlink}_#{timestamp}"
+       print "\nINFO: Moved #{currentlink} to Backups\n\n"
+     end
+   end
+
+# Recreate new link
+   run "cd #{monitor_install_dir}; mv #{testbed}_#{stage_dir} #{testbed}_#{build_number}; rm -f #{testbed}; ln -s  #{testbed}_#{build_number} #{testbed}"
+
+# Remove old backups
+   clean_backups("#{monitor_install_dir}/Backups",3,"#{release}")
+
+   print "\nINFO: Monitor relink complete\n\n"
+
+end
+
+desc "Stop AAS Jboss"
+task :stop_app, :roles => :app do
+   print "\nINFO: Stopping BE processes.\n\n"
+   run "source /home/pin/.bash_profile; #{be_install_dir}/aas/bin/jbossctl stop; true;"
+   sleep 5
+   killjboss("java")
+end
+
+desc "Start AAS Jboss"
+task :start_app, :roles => :app do
+   print "\nINFO: Starting BE processes.\n\n"
+   run "source /home/pin/.bash_profile; #{be_install_dir}/aas/bin/jbossctl start; true;"
+   run " ps -ef | grep aas | egrep -v grep; true;"
+end
+
+def killjboss(process_string)
+   numprocess = capture("ps -ef | grep #{process_string} | egrep -v grep ; echo $?").strip
+   if (numprocess != '1' )
+     run "ps -ef | grep #{process_string} | egrep -v grep "
+     print "\nWARNING: killing #{numprocess} \n\n"
+     run "ps -ef | grep #{process_string} | egrep -v grep | awk '{print$2}' | xargs kill -s 9; true "
+     run "rm -f #{be_install_dir}/aas/log/jboss.pid"
+   else
+     print "\nINFO: Process #{process_string} is down. No need to kill any processes. \n\n"
+   end
+end
+
+desc "Stop QM"
+task :stop_qm, :roles => :qm do
+  qm_instances.each { |x|
+   stop_qm_instance("#{x}")
+  }
+end
+
+def stop_qm_instance(qm_instance)
+  run "cd /ecas/qm/bin; echo yes | ./stop_qm -n #{qm_instance}; true;"
+  sleep 8
+  run " ps -ef | grep #{qm_instance} | grep -v grep; true;"
+end
+
+desc "Start QM"
+task :start_qm, :roles => :qm do
+  qm_instances.each { |x|
+   start_qm_instance("#{x}")
+  }
+end
+
+def start_qm_instance(qm_instance)
+  run "cd /ecas/qm/bin; echo yes | ./start_qm -n #{qm_instance}; true"
+  sleep 6
+  run " ps -ef | grep #{qm_instance} | grep -v grep; true;"
+end
+
+desc "Start AAS Apache"
+task :start_web, :roles => :web do
+   print "\nINFO: Starting FE processes\n\n"
+   run "/etc/httpd/bin/start_all; true;"
+end
+
+desc "Stop AAS Apache"
+task :stop_web, :roles => :web do
+   print "\nINFO: Stopping FE processes\n\n"
+   run "/etc/httpd/bin/stop_all; true;"
+end
+
+desc "Move the previous link"
+def move_previous(install_dir, linkname)
+ # Checking current link exists
+  if remote_file_exists?("#{install_dir}/#{linkname}") then
+    print "\nINFO: #{install_dir}/#{linkname} exists\n\n"
+    currentlink = capture("readlink #{install_dir}/#{linkname} | cut -f1 -d/").strip
+   # Checking previous link exists
+    if !remote_file_exists?("#{install_dir}/previous") then
+       # If there is no previous link, linking to current link
+        run "cd #{install_dir}; ln -s #{currentlink} previous; "
+        print "\nINFO: Previous link does not exist, linking previous to #{install_dir}/#{currentlink}\n\n"
+    else
+      previouslink = capture("readlink #{install_dir}/previous | cut -f1 -d/").strip
+     # Checking if this is the first time this release is installed
+      if "#{currentlink}" =~ /#{release}/ then
+         print "\nINFO: Release #{release} Already installed, no need to change previous link\n\n"
+      else 
+         print "\nINFO: First time for release #{release}, changing previous link\n\n"
+         if "#{currentlink}" != "#{previouslink}"  && remote_file_exists?("#{previouslink}")  then
+            # moving previous release to Backups
+            run "cd #{install_dir}; mv #{previouslink} Backups/#{previouslink}_#{timestamp}"
+            print "\nINFO: Moved #{previouslink} to #{install_dir}/Backups\n\n"
+         end
+         # Moving previous link to current release
+         run "cd #{install_dir}; rm -f previous; ln -s #{currentlink} previous; "
+         print "\nINFO: Created previous link to #{install_dir}/#{currentlink} \n\n"
+      end
+    end
+  else
+    print "\nERROR: #{install_dir}/#{linkname} does not exists!!\n\n"
+  end 
+end
+

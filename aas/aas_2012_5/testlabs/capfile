@@ -1,0 +1,468 @@
+# vim: filetype=ruby
+require 'fileutils'
+require 'net/smtp'
+# For QA log
+require '/u/build/build1/testlabs/lib/installer.rb'
+
+###############################
+## Release Notes:
+## https://fusion.qa.shared-bo.mtv1.vrsn.com/display/SSL/SSL+Retail+2012-5+Release+Notes#SSLRetail2012-5ReleaseNotes-AAS
+###############################
+
+# Current release
+set :release, "aas_2012_5"
+#Previous release
+set :prev_release, "aas_2012_3"
+
+# Base installation directory on testbed
+set :be_install_dir, "/app/vrsn"
+set :qm_install_dir, "/app/data/sql/AAS/#{testbed.upcase}"
+set :monitor_install_dir, "/app/monitors/current/aas"
+
+# Location of release tar packages on cap server
+#set :pkg_path, "/code/aas/#{release}"
+set :pkg_path, "/u/build/build3/aas/#{release}/lnx8-build/#{build_number}/productionPackaging/#{release}"
+
+# For QA logs
+set :logpath , "/u/build/build1/buildOp/aas/#{release}/testlabs/logDir"
+load '/u/build/build1/testlabs/lib/commontask.yonit.cap' #SHARED TASKS
+
+# Temporary staging directory for release
+set :stage_dir, "#{release}.staging"
+
+# Location of customization files for release
+set :customizer_repo, "/app/capistrano/customizer/aas/#{release}"
+
+# Location of third party packages on cap sever 
+set :thirdparty_pkg_path, "/code/thirdparty"
+
+# Location of target host directory to transfer packages to
+set :be_stagepkg_dir, "#{be_install_dir}/#{stage_dir}/packages"
+set :qm_stagepkg_dir, "#{qm_install_dir}/#{stage_dir}/packages"
+set :monitor_stagepkg_dir, "#{monitor_install_dir}/#{stage_dir}/packages"
+
+load '/app/capistrano/lib/common_1_0.cap'
+
+# QA email address
+@mailarray = ['DL-VSN-vss-testlabs@symantec.com','DL-VSN-SSLQAEDCNotification@symantec.com']
+
+#SWITCH SILO
+case testbed
+   when "aas1"
+     role :app, "pin@aas1be-m1-ap"
+     role :web, "mozilla@aas1fe-m1-wb"
+     role :qm, "pin@mmr1qmbe-m1-ap"
+     role :nagios, "nagios@aas1be-m1-ap"
+     emailsubj = "AAS1"
+   when "aas2"
+     role :app, "pin@aas2be-m1-ap"
+     role :web, "mozilla@aas2fe-m2-wb"
+     role :qm, "pin@mmr1qmbe-m1-ap"
+     role :nagios, "nagios@aas2be-m1-ap"
+     emailsubj = "AAS2"
+   when "aas3"
+     role :app, "pin@aas3be-m1-ap"
+     role :web, "mozilla@aas3fe-m1-wb"
+     role :qm, "pin@mmr1qmzn1be-m1-ap"
+     role :nagios, "nagios@aas3be-m1-ap"
+     emailsubj = "AAS3 PV"
+   when "aas4"
+     role :app, "pin@aas4be-m2-ap"
+     role :web, "mozilla@aas4fe-m2-wb"
+     role :qm, "pin@mmr1qmzn2be-m1-ap"
+     role :nagios, "nagios@aas4be-m2-ap"
+     emailsubj = "AAS4 PV"
+   else
+     puts "Invalid testbed #{testbed}"
+     exit 1
+end
+
+desc "Install of #{release} on BE and FE"
+task :install do
+  begin
+     install_qm
+     install_be
+#     install_monitor
+  rescue Exception => error
+     install_status("1","WiKi: https://fusion.qa.shared-bo.mtv1.vrsn.com/display/vsstestlabs/VSS+TestLabs+-+SSL+-+#{testbed.upcase} \n\n",emailsubj)
+#     mailer(@mailarray, "Install Failed #{emailsubj} : #{release}","WiKi: https://fusion.qa.shared-bo.mtv1.vrsn.com/display/vsstestlabs/VSS+TestLabs+-+SSL+-+#{emailsubj}")
+     exit 1
+  end
+     install_status("0","WiKi: https://fusion.qa.shared-bo.mtv1.vrsn.com/display/vsstestlabs/VSS+TestLabs+-+SSL+-+#{testbed.upcase} \n\n",emailsubj)
+#     mailer(@mailarray, "Install Completed #{emailsubj} : #{release}","#{emailsubj} has been installed with #{release}")
+end
+
+desc "Rollback both BE and QM to a rollback_release specified"
+task :rollback do
+  begin
+    rollback_qm
+    rollback_app
+#    rollback_monitor
+  rescue Exception => error
+     mailer(@mailarray, "Rollback Failed #{emailsubj} : #{rollback_release}" ,"")
+     exit 1
+  end
+     mailer(@mailarray, "Rollback Completed: #{emailsubj} : #{rollback_release}","")
+end
+
+desc "Install of #{release} on back end Tomcat"
+task :install_be, :roles => :app do
+  begin
+     stage
+     swap_install
+  end
+end
+
+desc "Rollback BE to a rollback_release specified"
+task :rollback_app, :roles => :app do
+  begin
+     set :release, "#{rollback_release}"
+
+   # Check if the requested release directory is available
+     if !remote_file_exists?("#{be_install_dir}/#{release}") then
+       if exists?(:rollback_release)
+         print "\nERROR #{release} does not exist!\n\n"
+         exit 1
+       end
+     end
+
+     print "INFO: SET ROLLBACK RELEASE to #{release} \n"
+     swap_install
+  end
+end
+
+desc "Transfer customizer only to host"
+task :transfer_cust_only, :roles => :app do
+  print "RE TRANSFER CUST ONLY\n"
+  set :be_stagepkg_dir, "#{be_install_dir}/#{release}/packages"
+  transfer_cust
+  print "DONE RE TRANSFER CUST ONLY\n"
+end
+
+desc "Transfer customizer"
+task :transfer_cust, :roles => :app do
+    print "\nINFO: Transfering Customization files\n"
+    upload "#{customizer_repo}/$CAPISTRANO:HOST$/CustomizeInit.pl", "#{be_stagepkg_dir}/customizer/CustomizeInit.pl", :via => :scp
+    upload "#{customizer_repo}/customize/Customize.pl", "#{be_stagepkg_dir}/customizer/Customize.pl", :via => :scp
+end
+
+desc "Transfer BE packages, stage code (install and customize)"
+task :stage, :roles => :app do 
+
+  # Remove the previous staging directory if exists
+    if remote_file_exists?("#{be_install_dir}/#{stage_dir}") then
+       print "\nINFO: Removing existing #{be_install_dir}/#{stage_dir}\n "
+       run "cd #{be_install_dir} && rm -rf #{stage_dir} "
+    end
+  
+  # Create the staging directory
+    print "\nINFO: Created #{be_install_dir}/#{stage_dir}\n\n"
+    run " mkdir -p #{be_stagepkg_dir}/customizer"
+
+  # Transfer customization files 
+    transfer_cust
+
+  # Transfer tar packages to be deployed 
+    print "\nINFO: Transfering packages\n"
+    upload "#{pkg_path}/#{release}_app.tar","#{be_stagepkg_dir}/", :via => :scp
+    upload "#{pkg_path}/#{release}_app.md5","#{be_stagepkg_dir}/", :via => :scp
+    upload "#{pkg_path}/#{release}_jbossconf.tar","#{be_stagepkg_dir}/", :via => :scp
+    upload "#{pkg_path}/#{release}_config.tar","#{be_stagepkg_dir}/", :via => :scp
+
+  # Un-tar packages and customize
+    print "\nINFO: Deploying packages\n"
+    run "cd #{be_install_dir}/#{stage_dir} && tar xvf #{be_stagepkg_dir}/#{release}_app.tar"
+    run "cd #{be_install_dir}/#{stage_dir} && tar xvf #{be_stagepkg_dir}/#{release}_jbossconf.tar"
+    run "cd #{be_install_dir}/#{stage_dir} && tar xvf #{be_stagepkg_dir}/#{release}_config.tar && perl #{be_stagepkg_dir}/customizer/Customize.pl -F #{be_stagepkg_dir}/customizer/CustomizeInit.pl | tee #{be_stagepkg_dir}/customizer/Customize.log"
+
+  # Link logs directory
+    run "cd #{be_install_dir}/#{stage_dir}; ln -s /app/logs/aas log;" 
+
+  # For QA
+    run "cd #{be_install_dir}/#{stage_dir}; touch #{build_number}.txt; true"
+
+    print "\n INFO: Staging is completed. \n\n"
+ 
+end
+
+desc "Stop app, link to release, and start app"
+task :swap_install, :roles => :app do
+  # Print current directory content
+   print "\nINFO: Contents of #{be_install_dir}\n"
+   run "cd #{be_install_dir} && ls -l"
+  
+  # Stop application
+   stop_app
+
+  # Rename staging directory to new release name
+   if remote_file_exists?("#{be_install_dir}/#{stage_dir}") then
+    # Remove current directory if same release (unless in rollback)
+     if remote_file_exists?("#{be_install_dir}/#{release}") then
+       if !exists?(:rollback_release)
+         print "\nINFO: Removing #{be_install_dir}/#{release} \n"
+         run "cd #{be_install_dir} && rm -rf #{release}"
+       end 
+     end
+     print "\nINFO: Renaming #{be_install_dir}/#{stage_dir} to #{be_install_dir}/#{release} \n"
+     run "cd #{be_install_dir} && mv #{stage_dir} #{release}"
+   end
+ 
+  # Remove current link
+   print "\nINFO: Removing symlinks #{be_install_dir}/aas\n"
+   run "cd #{be_install_dir} && rm aas; true"
+   
+  # Create link to new release
+   print "INFO: Creating symlinks #{be_install_dir}/aas\n"
+   run "cd #{be_install_dir} && ln -s #{release} aas"
+
+  # Print current directory content to see the change in link
+   print "\nINFO: Contents of #{be_install_dir}\n"
+   run "cd #{be_install_dir} && ls -l"
+
+  # Start application
+   start_app
+
+   print "\n INFO: Swapping of aas link is completed. \n\n"
+
+end
+
+desc "Stop AAS Tomcat"
+task :stop_app, :roles => :app do
+   print "INFO: Stopping tomcat instances\n"
+   run "#{be_install_dir}/aas/bin/jbossctl stop; true;"
+   sleep 5
+   print "INFO: verify Tomcat is down\n"
+   tomcatprocess("catalina.base=#{be_install_dir}/aas",120)
+end
+
+desc "Start AAS Tomcat"
+task :start_app, :roles => :app do
+   print "INFO: List Java processes\n"
+   run "ps -ef | grep java | egrep -v grep; true;"
+   print "\nINFO: Starting Tomcat\n"
+   run "#{be_install_dir}/aas/bin/jbossctl start; true;"
+   sleep 10
+#   healthcheck_curl("http://localhost:8080/aas/aas/pulse?application_locale=VRSN_US\\&auth=380e12a014903490050852406b0f7342","OK",60)
+end
+
+desc "Stop AAS Apache"
+task :stop_web, :roles => :web do
+  print "\nINFO: Stopping FE processes\n\n"
+  run "sudo /etc/httpd/bin/stop_aas; true;"
+  sleep 3
+end
+
+desc "Start AAS Apache"
+task :start_web, :roles => :web do
+  print "\nINFO: Starting FE processes\n\n"
+  run "sudo /etc/httpd/bin/start_aas; true;"
+end
+
+desc "Install of #{release} on QM"
+task :install_qm do
+  begin
+     stage_qm
+     swap_qm_install
+  end
+end
+
+desc "Rollback QM to a rollback_release specified"
+task :rollback_qm, :roles => :qm do
+  begin
+     set :release, "#{rollback_release}"
+
+   # Check if the requested release directory is available
+     if !remote_file_exists?("#{qm_install_dir}/#{release}") then
+       if exists?(:rollback_release)
+         print "\nERROR #{release} does not exist!\n\n"
+         exit 1
+       end
+     end
+
+     print "INFO: SET ROLLBACK RELEASE to #{release} \n"
+     swap_install
+  end
+end
+
+desc "Transfer QM package, stage code (install and customize)"
+task :stage_qm, :roles => :qm do 
+
+  # Remove the previous staging directory if exists
+    if remote_file_exists?("#{qm_install_dir}/#{stage_dir}") then
+       print "\nINFO: Removing existing #{qm_install_dir}/#{stage_dir}\n "
+       run "cd #{qm_install_dir} && rm -rf #{stage_dir} "
+    end
+  
+  # Create the staging directory
+    print "\nINFO: Created #{qm_install_dir}/#{stage_dir}\n\n"
+    run " mkdir -p #{qm_stagepkg_dir}"
+
+  # Transfer tar packages to be deployed 
+    print "\nINFO: Transfering packages\n"
+    upload "#{pkg_path}/#{release}_aas_sql.tar","#{qm_stagepkg_dir}/", :via => :scp
+    upload "#{pkg_path}/#{release}_aas_sql.md5","#{qm_stagepkg_dir}/", :via => :scp
+
+  # Un-tar packages and customize
+    print "\nINFO: Deploying packages\n"
+    run "cd #{qm_install_dir}/#{stage_dir} && tar xvf #{qm_stagepkg_dir}/#{release}_aas_sql.tar"
+
+  # For QA
+   run "cd #{qm_install_dir}/#{stage_dir}; touch #{build_number}.txt; true"
+
+   print "\n INFO: QM Staging is completed. \n\n"
+ 
+end
+
+desc "Stop QM, link to release, and start QM"
+task :swap_qm_install, :roles => :qm do
+  # Print current directory content
+   print "\nINFO: Contents of #{qm_install_dir}\n"
+   run "cd #{qm_install_dir} && ls -l"
+  
+  # Stop QM
+   stop_qm
+
+  # Rename staging directory to new release name
+   if remote_file_exists?("#{qm_install_dir}/#{stage_dir}") then
+   # Remove current directory if same release (unless in rollback)
+    if remote_file_exists?("#{qm_install_dir}/#{release}") then
+     if !exists?(:rollback_release)
+       print "\nINFO: Removing #{qm_install_dir}/#{release} \n"
+       run "cd #{qm_install_dir} && rm -rf #{release}"
+     end 
+    end
+     print "\nINFO: Renaming #{qm_install_dir}/#{stage_dir} to #{qm_install_dir}/#{release} \n"
+     run "cd #{qm_install_dir} && mv #{stage_dir} #{release}"
+   end
+ 
+  # Remove current link
+   print "\nINFO: Removing symlinks #{qm_install_dir}/sqlTemplates\n"
+   run "cd #{qm_install_dir} && rm sqlTemplates; true;"
+   
+  # Create link to new release
+   print "INFO: Creating symlinks #{qm_install_dir}/sqlTemplates\n"
+   run "cd #{qm_install_dir} && ln -s #{release} sqlTemplates"
+
+  # Print current directory content to see the change in link
+   print "\nINFO: Contents of #{qm_install_dir}\n"
+   run "cd #{qm_install_dir} && ls -l"
+
+  # Start QM
+   start_qm
+
+   print "\n INFO: Swapping of sqlTemplates link is completed. \n\n"
+
+end
+
+desc "Stop AAS QM"
+task :stop_qm, :roles => :qm do
+   run "cd /ecas/qm/bin; echo yes | ./stop_qm -n #{testbed.upcase}; true;"
+   sleep 8
+   run " ps -ef | grep #{testbed.upcase} | grep -v grep; true;"
+end
+
+desc "Start AAS QM"
+task :start_qm, :roles => :qm do
+   run "cd /ecas/qm/bin; ./start_qm -n #{testbed.upcase}; true"
+   sleep 6
+   run " ps -ef | grep #{testbed.upcase} | grep -v grep; true;"
+end
+
+desc "Install of #{release} on CM Nagios monitor"
+task :install_monitor do
+  begin
+     stage_monitor
+     swap_monitor_install
+  end
+end
+
+desc "Rollback monitor to a rollback_release specified"
+task :rollback_monitor, :roles => :nagios do
+  begin
+     set :release, "#{rollback_release}"
+
+   # Check if the requested release directory is available
+     if !remote_file_exists?("#{monitor_install_dir}/#{release}") then
+       if exists?(:rollback_release)
+         print "\nERROR #{release} does not exist!\n\n"
+         exit 1
+       end
+     end
+
+     print "INFO: SET ROLLBACK RELEASE to #{release} \n"
+     swap_monitor_install
+  end
+end
+
+desc "Transfer monitor package, stage code (install and customize)"
+task :stage_monitor, :roles => :nagios do
+
+  # Remove the previous staging directory if exists
+    if remote_file_exists?("#{monitor_install_dir}/#{stage_dir}") then
+       print "\nINFO: Removing existing #{monitor_install_dir}/#{stage_dir}\n "
+       run "cd #{monitor_install_dir} && rm -rf #{stage_dir} "
+    end
+  
+  # Create the staging directory
+    print "\nINFO: Created #{monitor_stagepkg_dir}\n\n"
+    run " mkdir -p #{monitor_stagepkg_dir}"
+
+  # Transfer tar packages to be deployed 
+    print "\nINFO: Transfering packages\n"
+    upload "#{pkg_path}/#{release}_timermonitor.tar","#{monitor_stagepkg_dir}/", :via => :scp
+    upload "#{pkg_path}/#{release}_timermonitor.md5","#{monitor_stagepkg_dir}/", :via => :scp
+
+  # Un-tar packages and customize
+    print "\nINFO: Deploying Monitor packages\n"
+    run "cd #{monitor_install_dir}/#{stage_dir} && tar xvf #{monitor_stagepkg_dir}/#{release}_timermonitor.tar"
+
+  # Since not customizable making manual change
+    run "perl -pi -e 's|./server.log|/app/jboss/server/aas/log/server.log|g' #{monitor_install_dir}/#{stage_dir}/monitor/appAlert.cfg"
+    run "perl -pi -e 's|./appAlert.log|/app/logs/monitor/appAlert.log|g' #{monitor_install_dir}/#{stage_dir}/monitor/appAlert.cfg"
+    run "perl -pi -e 's|/usr/local/nagios/libexec/appAlert.log|/app/logs/monitor/appAlert.log|g' #{monitor_install_dir}/#{stage_dir}/monitor/appAlert.pl"
+    run "perl -pi -e 's|./appAlert.cfg|/app/monitors/current/aas/monitor/appAlert.cfg|g' #{monitor_install_dir}/#{stage_dir}/monitor/appAlert.pl"
+
+  # For QA creating version file
+   run "cd #{monitor_install_dir}/#{stage_dir}; touch #{build_number}.txt; true"
+
+
+   print "\n INFO: Monitor Staging is completed. \n\n"
+ 
+end
+
+desc "Swap monitor monitor link to release"
+task :swap_monitor_install, :hosts => :nagios do
+  # Print current directory content
+   print "\nINFO: Contents of #{monitor_install_dir}\n"
+   run "cd #{monitor_install_dir} && ls -l"
+  
+  # Remove current directory if same release (unless in rollback)
+   if remote_file_exists?("#{monitor_install_dir}/#{release}") then
+     if !exists?(:rollback_release)
+       print "\nINFO: Removing #{monitor_install_dir}/#{release} \n"
+       run "cd #{monitor_install_dir} && rm -rf #{release}"
+     end 
+   end
+
+  # Rename staging directory to new release name
+   if remote_file_exists?("#{monitor_install_dir}/#{stage_dir}") then
+     print "\nINFO: Renaming #{monitor_install_dir}/#{stage_dir} to #{monitor_install_dir}/#{release} \n"
+     run "cd #{monitor_install_dir} && mv #{stage_dir} #{release}"
+   end
+ 
+  # Remove current link
+   print "\nINFO: Removing symlinks #{monitor_install_dir}/monitor\n"
+   run "cd #{monitor_install_dir} && rm monitor; true;"
+   
+  # Create link to new release
+   print "INFO: Creating symlinks #{monitor_install_dir}/monitor\n"
+   run "cd #{monitor_install_dir} && ln -s #{release}/monitor"
+
+  # Print current directory content to see the change in link
+   print "\nINFO: Contents of #{monitor_install_dir} after relink:\n"
+   run "cd #{monitor_install_dir} && ls -l"
+
+   print "\n INFO: Swapping of monitor link is completed. \n\n"
+
+end
+

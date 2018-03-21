@@ -1,0 +1,175 @@
+require 'testlabs/installer'
+set :use_sudo, false
+
+if ENV['BUILD_NUMBER'].to_s.empty?
+  build_number = "latest"
+else 
+  build_number =  ENV['BUILD_NUMBER']
+end
+
+set :release, "aas_2010_1"
+set :build, "/u/build/build3/aas/#{release}/lnx8-build/#{build_number}"
+set :staging, "/remoteInstall/#{release}/#{build_number}"
+set :stage_dir, "#{build_number}_" + Time.now.strftime("%m%d%Y_%I%M")
+set :app_home, "/app/vrsn"
+set :be_host, "aas3-be"
+set :qm_host, "mmr1-qm-zn1-be"
+set :qm_instance, "AAS3"
+
+set :qm_packages, [
+  { :package_tag => "aas_sql", :package_name => "#{release}_aas_sql.tar", :install_path => "/ecas/aas/#{qm_instance}/latest", :customizable => "no" }, 
+]
+
+set :be_packages, [
+#  { :package_tag => "jbossconf", :package_name => "#{release}_jbossconf.tar", :install_path => "#{app_home}/aas", :customizable => "no" }, 
+#  { :package_tag => "domain", :package_name => "#{release}_domain.tar", :install_path => "#{app_home}/aas", :customizable => "yes" }, 
+  { :package_tag => "adms", :package_name => "#{release}_adms.tar", :install_path => "#{app_home}/aas", :customizable => "no" }, 
+  { :package_tag => "apor", :package_name => "#{release}_apor.tar", :install_path => "#{app_home}/aas", :customizable => "no" }, 
+#  { :package_tag => "avs", :package_name => "#{release}_avs.tar", :install_path => "#{app_home}/aas", :customizable => "yes" }, 
+#  { :package_tag => "cat", :package_name => "#{release}_cat.tar", :install_path => "#{app_home}/aas", :customizable => "yes" }, 
+]
+
+#mailarray = ['vss-testlabs','sslqaedcnotification']
+mailarray = ['ylustig']
+emailtemplate = load_email_template("aas3.mail")
+
+task :aas_install do
+  begin
+     qm_install
+#     be_install
+     mailer mailarray, "Install Completed aas3: #{build_number}", emailtemplate
+     rescue Exception => error
+      mailer mailarray, "Install Failed aas3: #{build_number}", emailtemplate 
+      exit 1
+  end
+end
+
+task :be_install, :hosts => "pin@#{be_host}" do 
+# Create staging directories and remove old packages if existed
+  run "rm -rf /remoteInstall/#{release}"
+  run "mkdir -p #{staging}/productionPackaging"
+
+# Copy packages
+  be_packages.each { |x|
+     upload  "#{build}/productionPackaging/#{release}/" + x[:package_name], "#{staging}/productionPackaging/", :via => :scp
+  }
+
+# Copy customization file
+  upload "#{build}/buildOp/aas/#{release}/#{be_host}/", "#{staging}", :via => :scp, :recursive => true
+
+# Stop Jboss
+  stop_jboss
+
+# Move current link to Backups
+#  currentlink = capture("readlink #{app_home}/aas").strip
+#  run "cd #{app_home}; mv #{currentlink} Backups/."
+
+# Remove old backups
+#  clean_backups "#{app_home}/Backups",6,"*"
+
+# Recreate new link for #{app_home}/aas 
+#  run "mkdir -p #{app_home}/#{stage_dir}"
+#  run "cd #{app_home}; rm -f aas; ln -s  #{stage_dir} aas"
+
+# Sparse release - overlay
+  run "rm -f #{app_home}/aas/*{release}*.txt; touch #{app_home}/aas/#{build_number}.txt"
+
+# Install and customize packages
+  be_packages.each { |x|
+     run "cd #{x[:install_path]}; tar xvfp #{staging}/productionPackaging/" + x[:package_name]
+     if x[:customizable] == "yes"
+       run "cd #{x[:install_path]}/customizer/#{x[:package_tag]}; cp #{staging}/#{be_host}/CustomizeInit.pl vars.dat; ./setConfig.sh"
+     end
+  }
+
+# Customize the not-customizable jbossconf package
+#  run "cd #{app_home}/aas;  /app/vrsn/customize/Customize.pl -F #{staging}/#{be_host}/CustomizeInit.pl -L #{staging}/Customize.lst"
+
+# Post installation tasks
+# For ADMS
+#  run "cp #{app_home}/aas/vsconfig/adms.xml #{app_home}/aas/conf/vsconfig"
+# For APOR
+#  run "cp #{app_home}/aas/vsconfig/apor.xml #{app_home}/aas/conf/vsconfig"
+#  run "touch #{app_home}/aas/vsconfig/euroIPStopper"
+#  run "cd  #{app_home}/aas/conf/vsconfig; cp provider_DNB.properties provider_DNB.properties.bk"
+#  run "perl -pi -e 's|globalaccess.dnb.com|toolkit.dnb.com|s' #{app_home}/aas/vsconfig/provider_DNB.properties"
+# For AVS
+#  run "cp #{app_home}/aas/vsconfig/avs.xml #{app_home}g/aas/conf/vsconfig"
+# For CAT
+#  run "cp -r #{app_home}/aas/vsconfig/cat #{app_home}g/aas/conf/vsconfig"
+  
+# Start Jboss server
+  start_jboss
+
+end
+
+task :qm_install, :hosts => "pin@#{qm_host}" do 
+# Create staging directories and remove old packages if existed
+  run "rm -rf /remoteInstall/#{release}"
+  run "mkdir -p #{staging}/productionPackaging"
+
+# Copy packages
+  qm_packages.each { |x|
+     upload  "#{build}/productionPackaging/#{release}/" + x[:package_name], "#{staging}/productionPackaging/", :via => :scp
+  }
+
+# Stop QM
+  stop_qm
+
+# Move current link to backups
+#  currentlink = capture("ls -l /ecas/aas/#{qm_instance}/latest| cut -f5 -d/ | cut -f3 -d' '").strip
+#  run "cd /ecas/aas/#{qm_instance}; mv #{currentlink} Backups/."
+
+# Create stage directory
+#  run "mkdir -p /ecas/aas/#{qm_instance}/#{stage_dir}"
+
+# Recreate new link to /ecas/aas/#{qm_instance}/latest
+#  run "cd /ecas/aas/#{qm_instance}; rm -f latest; ln -s #{stage_dir} latest"
+  
+# Sparse release - overlay
+  run "cd /ecas/aas/#{qm_instance}/latest; rm -f *{release}*.txt; touch #{build_number}.txt"
+
+# Install packages
+  qm_packages.each { |x|
+     run "cd #{x[:install_path]}; tar xvfp #{staging}/productionPackaging/" + x[:package_name]
+  }
+
+# Start QM
+  start_qm
+
+# Remove old backups
+  clean_backups "/ecas/aas/#{qm_instance}/Backups",6,"*"
+
+end
+
+task :stop_qm, :hosts => "pin@#{qm_host}" do 
+# Stop #{qm_instance} QM
+  run "cd /ecas/qm/bin; echo yes | ./stop_qm -n #{qm_instance}; true;"
+  sleep 6
+  print "Seeing if #{qm_instance} qm stopped properly:"
+  run " ps -ef | grep #{qm_instance} | grep -v grep; true;"
+end
+
+task :start_qm, :hosts => "pin@#{qm_host}" do 
+# Start #{qm_instance} QM
+  run "cd /ecas/qm/bin; echo yes | ./start_qm -n #{qm_instance}; true"
+  sleep 4
+  print "Seeing if #{qm_instance} qm started properly:"
+  run " ps -ef | grep #{qm_instance} | grep -v grep; true;"
+end
+
+task :stop_jboss, :hosts => "pin@#{be_host}" do 
+# Stop Jboss server
+  run "source /home/pin/.bash_profile; cd #{app_home}/aas/bin; ./jbossctl stop; true;"
+  sleep 6
+  print "Seeing if jboss stopped properly:"
+  run "ps -ef | grep java | grep -v grep; true;"
+end
+
+task :start_jboss, :hosts => "pin@#{be_host}" do 
+# Start Jboss server
+  run "source /home/pin/.bash_profile; cd #{app_home}/aas/bin; ./jbossctl start; true;"
+  sleep 3
+  print "Seeing if jboss stopped properly:"
+  run "ps -ef | grep java | grep -v grep; true;"
+end

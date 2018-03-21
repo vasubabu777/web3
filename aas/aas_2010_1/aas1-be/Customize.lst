@@ -1,0 +1,5 @@
+$fileArray = [qw (
+/app/jboss/server/aas/deploy/03oracle-ds.xml
+/app/jboss/server/aas/conf/vsconfig/common.xml
+/app/jboss/server/aas/conf/vsconfig/fpeapp.xml
+)];

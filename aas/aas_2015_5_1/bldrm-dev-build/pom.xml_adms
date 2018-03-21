@@ -1,0 +1,374 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.symantec.adms</groupId>
+  <artifactId>adms</artifactId>
+  <version>2015.5.1.0-SNAPSHOT</version>
+  <packaging>war</packaging>
+  <name>ADMS</name>
+
+ 
+
+  
+   <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- Dependency Versions -->
+        <logback.version>1.0.3</logback.version>
+        <apache.commons-dbcp.version>1.4</apache.commons-dbcp.version>
+        <apache.commons-beanutils.version>1.8.3</apache.commons-beanutils.version>
+        <apache.commons-codec.version>1.6</apache.commons-codec.version>
+        <apache.commons-httpclient.version>3.1</apache.commons-httpclient.version>
+        <apache.commons-lang.version>2.6</apache.commons-lang.version>
+        <oracle.version>10.2.0.3.0</oracle.version>
+        <jaxb-impl.version>2.2.5</jaxb-impl.version>
+        <apache.cxf.version>2.6.0</apache.cxf.version>
+        <slf4j.version>1.6.4</slf4j.version>
+        <springframework.version>3.2.0.RELEASE</springframework.version>
+        <xercesImpl.version>2.10.0</xercesImpl.version>
+        <testng.version>6.8</testng.version>
+        <hamcrest.version>1.2.1</hamcrest.version>
+        <mockito.version>1.9.5</mockito.version>
+        <validation-api.version>1.0.0.GA</validation-api.version>
+        <jersey.version>1.12</jersey.version>
+        <servlet.version>2.5</servlet.version>
+        <apache.velocity.version>1.7</apache.velocity.version>
+        <javax.mail.version>1.4.3</javax.mail.version>
+        <paypal.payflow.version>4.31</paypal.payflow.version>
+        <jax.ws.rs.version>1.1.1</jax.ws.rs.version>
+        <hibernate-validator.version>4.2.0.Final</hibernate-validator.version>
+        <aspectj.version>1.6.12</aspectj.version>
+        <cglib.version>2.2.2</cglib.version>
+        <gson.version>2.1</gson.version>
+        <jettison.version>1.1</jettison.version>
+        <jstl.version>1.2</jstl.version>
+        <gwt.version>2.3.0</gwt.version>
+        <not-yet-commons-ssl.version>0.3.11</not-yet-commons-ssl.version>
+        <coyote.version>6.0.13</coyote.version>
+        <catalina.version>6.0.13</catalina.version>
+        <ehcache.version>2.6.0</ehcache.version>
+        <bcprov.version>1.47</bcprov.version>
+        <simpleframework.version>4.1.17</simpleframework.version>
+        <jackson.version>2.4.2</jackson.version>
+        <jersey.version>1.18</jersey.version>
+        <clover.version>4.0.4</clover.version>
+        <commons-lang3.version>3.2.1</commons-lang3.version>
+        <commons-httpclient.version>3.1</commons-httpclient.version>
+    </properties>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.0</version>
+                    <configuration>
+                        <source>1.8</source>
+                        <target>1.8</target>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>2.12</version>
+                </plugin>
+                <plugin>
+                    <groupId>com.atlassian.maven.plugins</groupId>
+                    <artifactId>maven-clover2-plugin</artifactId>
+                    <version>${clover.version}</version>
+                    <configuration>
+                       <license><![CDATA[pnRqTliWSAcpfmQTkVNkIRNvQqRTRVuxNJFvGcSRBXGDMx
+                       mi2KkVbxCGEl6kY1rJT0rI9N2KKs46HIhuF<U9MxN7bdyg
+                       MrorXsPPPQQrRPmrRPquuQNrrPoQROMMoptUXwXWuVXwps
+                       TnnonmnmUUnqmsnoqmmmmmmUUnqmsnoqmmmmmmUUJvjXkq
+                       bZWUUnmm]]></license>
+                       <generateXml>true</generateXml>
+                       <generateHtml>true</generateHtml>
+                       <includesTestSourceRoots>true</includesTestSourceRoots>
+                       <jdk>1.8</jdk>
+                       <flushPolicy>interval</flushPolicy>
+                       <flushInterval>10000</flushInterval>
+                       <cloverDatabase>clover_db/.clover/clover.db</cloverDatabase>
+                       <singleCloverDatabase>true</singleCloverDatabase>
+                       <excludes>
+                       </excludes>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+    <reporting>
+        <plugins>
+            <plugin>
+                <groupId>com.atlassian.maven.plugins</groupId>
+                <artifactId>maven-clover2-plugin</artifactId>
+                <version>${clover.version}</version>
+                <configuration>
+                    <excludes>
+                    </excludes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </reporting>
+
+    <dependencies>
+
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-core</artifactId>
+            <version>4.0.3.RELEASE</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-jdbc</artifactId>
+            <version>4.0.3.RELEASE</version>
+        </dependency>
+
+        <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-web</artifactId>
+                <version>4.0.3.RELEASE</version>
+       </dependency>
+       <dependency>
+           <groupId>org.springframework</groupId>
+           <artifactId>spring-context</artifactId>
+           <version>4.0.3.RELEASE</version>
+       </dependency>
+       <dependency>
+           <groupId>org.springframework</groupId>
+           <artifactId>spring-webmvc</artifactId>
+           <version>4.0.3.RELEASE</version>
+       </dependency>
+        <dependency>
+            <groupId>commons-dbcp</groupId>
+            <artifactId>commons-dbcp</artifactId>
+            <version>1.4</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.oracle</groupId>
+            <artifactId>ojdbc14</artifactId>
+            <version>10.2.0.3.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>${commons-lang3.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-httpclient</groupId>
+            <artifactId>commons-httpclient</artifactId>
+            <version>${commons-httpclient.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <version>3.0.1</version>
+            <scope>provided</scope>
+        </dependency>
+        
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+	    <artifactId>gson</artifactId>
+	    <version>2.2.4</version>
+	</dependency>
+			
+	<dependency>
+	    <groupId>com.fasterxml.jackson.core</groupId>
+	    <artifactId>jackson-core</artifactId>
+	    <version>${jackson.version}</version>
+	</dependency>
+
+	<dependency>
+	    <groupId>com.fasterxml.jackson.core</groupId>
+	    <artifactId>jackson-databind</artifactId>
+	    <version>${jackson.version}</version>
+	</dependency>
+
+        <dependency>
+            <groupId>com.sun.jersey</groupId>
+            <artifactId>jersey-client</artifactId>
+            <version>${jersey.version}</version>
+        </dependency>
+                
+        <!-- QuartzJobBean in spring-context-support.jar -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context-support</artifactId>
+            <version>4.0.3.RELEASE</version>
+        </dependency>
+
+        <!-- Spring + Quartz need transaction -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-tx</artifactId>
+            <version>4.0.3.RELEASE</version>
+        </dependency>
+
+        <!-- Quartz framework -->
+        <dependency>
+            <groupId>org.quartz-scheduler</groupId>
+            <artifactId>quartz</artifactId>
+            <version>1.8.6</version>
+        </dependency>
+
+        <!-- Third Party Dependencies -->
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.0.3</version>
+        </dependency>
+
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-core</artifactId>
+            <version>1.0.3</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>log4j-over-slf4j</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.simpleframework</groupId>
+            <artifactId>simple</artifactId>
+            <version>${simpleframework.version}</version>
+        </dependency>
+   
+        <dependency>
+            <groupId>com.atlassian.clover</groupId>
+            <artifactId>clover</artifactId>
+            <version>${clover.version}</version>
+      	</dependency>
+
+	<dependency>
+            <groupId>com.atlassian.maven.plugins</groupId>
+            <artifactId>maven-clover2-plugin</artifactId>
+            <version>${clover.version}</version>
+                                 <exclusions>
+                                 <exclusion>
+                               <!-- NOTE: Version 1.5.6 has bundled slf4j -->
+                                   <groupId>org.apache.jackrabbit</groupId>
+                                   <artifactId>jackrabbit-webdav</artifactId>
+                                   </exclusion>
+                                    <exclusion>
+                               <!-- NOTE: Version 1.5.6 has bundled slf4j -->
+                                   <groupId>org.slf4j</groupId>
+                                   <artifactId>slf4j-jdk14</artifactId>
+                                   </exclusion>
+                                    <exclusion>
+                               <!-- NOTE: Version 1.5.6 has bundled slf4j -->
+                                   <groupId>org.slf4j</groupId>
+                                   <artifactId>jcl-over-slf4j</artifactId>
+                                   </exclusion>
+                                        <exclusion>
+                               <!-- NOTE: Version 1.5.6 has bundled slf4j -->
+                                   <groupId>org.apache.maven.wagon</groupId>
+                                   <artifactId>wagon-webdav-jackrabbit</artifactId>
+                                   </exclusion>
+                             </exclusions>
+     	</dependency>
+
+        <!-- Test Dependencies -->
+        <dependency>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <version>${testng.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-core</artifactId>
+            <version>${hamcrest.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-library</artifactId>
+            <version>${hamcrest.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+            <version>4.0.3.RELEASE</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+	    <groupId>org.mockito</groupId>
+	    <artifactId>mockito-core</artifactId>
+ 	    <version>${mockito.version}</version>
+	</dependency>
+	<dependency>
+            <groupId>com.jayway.jsonpath</groupId>
+            <artifactId>json-path</artifactId>
+            <version>0.8.1</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+    
+    <repositories>
+		<repository>
+			<id>public</id>
+			<url>http://buildtools5-lnx.symclab.net:8080/nexus/content/groups/public</url>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+		</repository>
+		<repository>
+			<id>private</id>
+			<url>http://buildtools5-lnx.symclab.net:8080/nexus/content/groups/private</url>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+		</repository>
+	</repositories>
+
+	<pluginRepositories>
+		<pluginRepository>
+			<id>public</id>
+			<url>http://buildtools5-lnx.symclab.net:8080/nexus/content/groups/public</url>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+		</pluginRepository>
+	</pluginRepositories>
+
+	<distributionManagement>
+		<site>
+			<id>www.symantec.com</id>
+			<url>file://app/wss/site</url>
+		</site>
+		<repository>
+			<id>nexusReleases</id>
+			<name>Nexus Release Repository</name>
+			<url>http://buildtools5-lnx.symclab.net:8080/nexus/content/repositories/releases</url>
+		</repository>
+		<snapshotRepository>
+			<id>nexusSnapshots</id>
+			<name>Nexus Snapshot Repository</name>
+			<url>http://buildtools5-lnx.symclab.net:8080/nexus/content/repositories/snapshots</url>
+		</snapshotRepository>
+	</distributionManagement>
+</project>
